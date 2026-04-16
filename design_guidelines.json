@@ -1,0 +1,147 @@
+{
+  "theme_and_archetype": {
+    "theme": "LIGHT",
+    "archetype": "4 (Swiss & High-Contrast)",
+    "vibe": "Objective, rigid, functional, scannable, authority",
+    "description": "A high-performance document tracking and approval dashboard for a corporate environment. Relies on stark contrasts, sharp borders, and data density over decorative elements. Uses an 'F-Pattern' scanning layout with modular widgets."
+  },
+  "typography": {
+    "font_families": {
+      "heading": "Outfit, sans-serif",
+      "body": "IBM Plex Sans, sans-serif",
+      "mono": "IBM Plex Mono, monospace"
+    },
+    "rules": {
+      "h1": "text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900",
+      "h2": "text-2xl font-medium tracking-tight text-slate-900",
+      "h3": "text-lg sm:text-xl font-medium tracking-tight text-slate-800",
+      "h4": "text-base font-medium tracking-tight text-slate-800",
+      "body": "text-sm text-slate-600 leading-relaxed",
+      "label": "text-xs font-semibold uppercase tracking-[0.2em] text-slate-500",
+      "data_value": "text-xl sm:text-2xl font-semibold text-slate-900",
+      "font_weights": "Use Radical weight contrast: font-light for subtext, font-semibold or font-bold for primary data/headings."
+    }
+  },
+  "color_palette": {
+    "base": {
+      "background": "#FFFFFF",
+      "surface": "#F9FAFB",
+      "surface_hover": "#F3F4F6",
+      "border": "#E5E7EB",
+      "border_focus": "#0F172A"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "muted": "#94A3B8",
+      "inverse": "#FFFFFF"
+    },
+    "brand": {
+      "primary": "#0F172A",
+      "primary_hover": "#1E293B",
+      "primary_active": "#334155"
+    },
+    "status": {
+      "approved": {
+        "text": "#047857",
+        "bg": "#ECFDF5",
+        "border": "#A7F3D0"
+      },
+      "pending": {
+        "text": "#B45309",
+        "bg": "#FFFBEB",
+        "border": "#FDE68A"
+      },
+      "in_progress": {
+        "text": "#1D4ED8",
+        "bg": "#EFF6FF",
+        "border": "#BFDBFE"
+      },
+      "rejected": {
+        "text": "#B91C1C",
+        "bg": "#FEF2F2",
+        "border": "#FECACA"
+      }
+    },
+    "rules": {
+      "tinted_grey": "Never use pure #000000 or #808080. Greys are tinted with Slate (blueish).",
+      "contrast": "Ensure APCA standard contrast. High-contrast Swiss design.",
+      "hover_states": "ALWAYS explicitly set text color on hover (e.g. hover:bg-slate-900 hover:text-white)."
+    }
+  },
+  "layout_and_spacing": {
+    "grid_system": "The 'Control Room' Grid",
+    "structure": {
+      "base_grid": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4",
+      "gap": "gap-4 or gap-6",
+      "sidebar": "w-64 fixed left-0 top-0 h-screen border-r border-slate-200 bg-slate-50",
+      "main_content": "ml-64 p-8 min-h-screen bg-white"
+    },
+    "surfaces": {
+      "strategy": "Grid Borders (The Technical Look)",
+      "card": "bg-white border border-slate-200 rounded-none p-6 shadow-none transition-all hover:border-slate-300",
+      "widget": "bg-slate-50 border border-slate-200 rounded-none p-4",
+      "modal_overlay": "bg-slate-900/60 backdrop-blur-sm"
+    },
+    "spacing_scale": "Use p-4, p-6, p-8. Containers with borders MUST have generous padding to prevent text collision."
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-slate-900 text-white rounded-none px-6 py-2.5 text-sm font-medium hover:bg-slate-800 focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 transition-colors",
+      "secondary": "bg-white text-slate-900 border border-slate-200 rounded-none px-6 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors",
+      "danger": "bg-red-600 text-white rounded-none px-6 py-2.5 text-sm font-medium hover:bg-red-700 transition-colors"
+    },
+    "tables": {
+      "wrapper": "w-full border-collapse border border-slate-200",
+      "header": "bg-slate-50 border-b border-slate-200 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider py-3 px-4",
+      "cell": "py-4 px-4 border-b border-slate-200 text-sm text-slate-900",
+      "rules": "Use sticky headers, zebra striping optional but clear hover state on rows is mandatory."
+    },
+    "status_badges": {
+      "style": "inline-flex items-center px-2.5 py-0.5 rounded-none text-xs font-medium border",
+      "note": "Apply specific status colors from color_palette.status object."
+    },
+    "inputs": {
+      "text": "w-full border border-slate-200 rounded-none px-4 py-2 text-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none transition-all bg-white",
+      "select": "w-full border border-slate-200 rounded-none px-4 py-2 text-sm focus:border-slate-900 focus:ring-1 focus:ring-slate-900 outline-none bg-white",
+      "label": "block text-sm font-medium text-slate-700 mb-1"
+    },
+    "timeline": {
+      "description": "Vertical stepper component for document history routing. Left-aligned line, small circular nodes. Active node is solid slate-900, past nodes are slate-300."
+    }
+  },
+  "interactions_and_motion": {
+    "hover": "Hover states must have higher contrast than default.",
+    "focus": "All interactive elements must use focus:ring-2 focus:ring-slate-900 focus:outline-none focus:ring-offset-2.",
+    "transitions": "transition-all duration-200 ease-in-out",
+    "accessibility": "Respect prefers-reduced-motion."
+  },
+  "icons": {
+    "library": "@phosphor-icons/react",
+    "installation": "yarn add @phosphor-icons/react",
+    "usage": "Use for dense dashboards. Weight: 'regular' or 'fill' for active states."
+  },
+  "testing": {
+    "requirements": "All interactive and key informational elements MUST include a `data-testid` attribute (kebab-case, role-based). Examples: `data-testid='login-submit-button'`, `data-testid='document-approve-button'`."
+  },
+  "media": {
+    "image_urls": {
+      "login_background": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/f8d6562d-9bc6-42cd-90f8-cdabe55c7535/images/b7d5730305d10eae83f2d04934b1c6537c6af8fe8b448e4b271ccbb97b4f4bf2.png",
+        "description": "Wide-angle photograph of minimal white Swiss architecture, frosted glass, sharp lines. Use as the background for the login screen."
+      },
+      "empty_state_documents": {
+        "url": "https://images.unsplash.com/photo-1554325103-6985922f9a41?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwzfHxtaW5pbWFsJTIwZG9jdW1lbnQlMjBmb2xkZXIlMjB3aGl0ZSUyMGRlc2t8ZW58MHx8fHwxNzc1ODI2MjcyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "White printer paper beside brown candlestick on minimal desk. Use for empty state visual when no documents are pending."
+      }
+    },
+    "rules": "NEVER use placeholder URLs. Always use the provided image URLs."
+  },
+  "app_specific_instructions": {
+    "architecture": "This is a local network document tracking app. Focus on data density and clear routing workflows.",
+    "departments": "Ensure distinct visual separation or clear labels for departments: MUHASEBE, İHRACAT, ÜRETİM&OPERASYON.",
+    "roles": "Admin (ekrem.karabiyik) has full access to User Management, Permissions, and Logs. Standard users only see documents routed to them.",
+    "notifications": "Build a notification bell dropdown in the header with a red indicator dot when new documents arrive.",
+    "routing_visibility": "Users only see the routing history (from start to finish) for documents they initiated. They cannot see other users' documents unless routed to them."
+  }
+}
