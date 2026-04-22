@@ -59,6 +59,23 @@ const Layout = ({ children }) => {
     }
   };
 
+  const markAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      await axios.put(`${API}/notifications/read-all`, {}, { withCredentials: true });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+    }
+  };
+
+  const onBellClick = () => {
+    const willOpen = !showNotifications;
+    setShowNotifications(willOpen);
+    // When opening, mark all as read (clear the red dot)
+    if (willOpen && unreadCount > 0) markAllAsRead();
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -195,7 +212,7 @@ const Layout = ({ children }) => {
           
           <div className="relative">
             <button
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={onBellClick}
               data-testid="notification-bell"
               className="relative p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-50 transition-colors"
             >

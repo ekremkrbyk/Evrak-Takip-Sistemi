@@ -16,6 +16,27 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
+// Auto-clear expired token on 401 responses (prevents infinite AUTH FAIL logs)
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const url = error?.config?.url || '';
+    const isAuthCheck = url.includes('/auth/login') || url.includes('/auth/register');
+    if (status === 401 && !isAuthCheck) {
+      // Clear stale token; subsequent request won't send an expired Bearer
+      if (localStorage.getItem('access_token')) {
+        localStorage.removeItem('access_token');
+        // If the app already considered user logged in, redirect to login
+        if (!window.location.pathname.startsWith('/login')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 function formatApiErrorDetail(detail) {
   if (detail == null) return 'Bir hata oluştu. Lütfen tekrar deneyin.';
   if (typeof detail === 'string') return detail;

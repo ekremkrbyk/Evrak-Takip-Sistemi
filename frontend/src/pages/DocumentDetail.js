@@ -235,42 +235,59 @@ const DocumentDetail = () => {
           )}
 
           {/* Actions */}
-          <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-slate-200">
-            {canRoute && (
-              <button onClick={() => setShowRoute(true)} data-testid="route-button" className="bg-slate-900 text-white px-5 py-2 text-sm font-medium hover:bg-slate-800 flex items-center gap-2">
-                <PaperPlaneTilt size={18} /><span>Yönlendir</span>
-              </button>
-            )}
-            {canApprove && (
-              <button onClick={() => { setActionData({ action: 'approve', note: '' }); setShowAction(true); }} data-testid="approve-button" className="bg-green-600 text-white px-5 py-2 text-sm font-medium hover:bg-green-700 flex items-center gap-2">
-                <CheckCircle size={18} /><span>Onayla (Damga)</span>
-              </button>
-            )}
-            {canReject && (
-              <button onClick={() => { setActionData({ action: 'reject', note: '' }); setShowAction(true); }} data-testid="reject-button" className="bg-red-600 text-white px-5 py-2 text-sm font-medium hover:bg-red-700 flex items-center gap-2">
-                <XCircle size={18} /><span>Reddet</span>
-              </button>
-            )}
-            {canIade && (
-              <button onClick={() => { setActionData({ action: 'iade', note: '' }); setShowAction(true); }} data-testid="iade-button" className="bg-purple-600 text-white px-5 py-2 text-sm font-medium hover:bg-purple-700 flex items-center gap-2">
-                <ArrowUDownLeft size={18} /><span>İade (Eksik)</span>
-              </button>
-            )}
-            {canRevize && (
-              <button onClick={() => { setActionData({ action: 'revize', note: '' }); setShowAction(true); }} data-testid="revize-button" className="bg-amber-600 text-white px-5 py-2 text-sm font-medium hover:bg-amber-700 flex items-center gap-2">
-                <ArrowCounterClockwise size={18} /><span>Revize İste</span>
-              </button>
-            )}
-            {canNotRelated && (
-              <button onClick={() => { setActionData({ action: 'not_related', note: '' }); setShowAction(true); }} data-testid="not-related-button" className="bg-white text-slate-900 border border-slate-300 px-5 py-2 text-sm font-medium hover:bg-slate-50 flex items-center gap-2">
-                <QuestionMark size={18} /><span>Bu Birimle Alakalı Değil</span>
-              </button>
-            )}
-            {canGeriAl && (
-              <button onClick={() => { setActionData({ action: 'geri_al', note: '' }); setShowAction(true); }} data-testid="geri-al-button" className="bg-white text-red-600 border border-red-300 px-5 py-2 text-sm font-medium hover:bg-red-50 flex items-center gap-2">
-                <Prohibit size={18} /><span>Geri Al / İptal</span>
-              </button>
-            )}
+          <div className="mt-6 pt-6 border-t border-slate-200">
+            {!canActOnDoc && !['approved', 'rejected', 'cancelled'].includes(doc.status) ? (
+              <div className="p-4 bg-blue-50 border border-blue-200 flex items-start gap-3" data-testid="no-action-info">
+                <div className="shrink-0 mt-0.5">
+                  <Clock size={20} className="text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900">Bu belge şu an başka birimde işleniyor</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Belge <span className="font-semibold">{doc.current_department}</span> biriminde. İlgili birim yanıt verdiğinde size bildirim gelecek.
+                    {isCreator && ' Kendi yüklediğiniz belge olduğu için akışı iptal edebilirsiniz.'}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {canRoute && (
+                <button onClick={() => setShowRoute(true)} data-testid="route-button" className="bg-slate-900 text-white px-5 py-2 text-sm font-medium hover:bg-slate-800 flex items-center gap-2">
+                  <PaperPlaneTilt size={18} /><span>Yönlendir</span>
+                </button>
+              )}
+              {canApprove && (
+                <button onClick={() => { setActionData({ action: 'approve', note: '' }); setShowAction(true); }} data-testid="approve-button" className="bg-green-600 text-white px-5 py-2 text-sm font-medium hover:bg-green-700 flex items-center gap-2">
+                  <CheckCircle size={18} /><span>Onayla (Damga)</span>
+                </button>
+              )}
+              {canReject && (
+                <button onClick={() => { setActionData({ action: 'reject', note: '' }); setShowAction(true); }} data-testid="reject-button" className="bg-red-600 text-white px-5 py-2 text-sm font-medium hover:bg-red-700 flex items-center gap-2">
+                  <XCircle size={18} /><span>Reddet</span>
+                </button>
+              )}
+              {canIade && (
+                <button onClick={() => { setActionData({ action: 'iade', note: '' }); setShowAction(true); }} data-testid="iade-button" className="bg-purple-600 text-white px-5 py-2 text-sm font-medium hover:bg-purple-700 flex items-center gap-2">
+                  <ArrowUDownLeft size={18} /><span>İade (Eksik)</span>
+                </button>
+              )}
+              {canRevize && (
+                <button onClick={() => { setActionData({ action: 'revize', note: '' }); setShowAction(true); }} data-testid="revize-button" className="bg-amber-600 text-white px-5 py-2 text-sm font-medium hover:bg-amber-700 flex items-center gap-2">
+                  <ArrowCounterClockwise size={18} /><span>Revize İste</span>
+                </button>
+              )}
+              {canNotRelated && (
+                <button onClick={() => { setActionData({ action: 'not_related', note: '' }); setShowAction(true); }} data-testid="not-related-button" className="bg-white text-slate-900 border border-slate-300 px-5 py-2 text-sm font-medium hover:bg-slate-50 flex items-center gap-2">
+                  <QuestionMark size={18} /><span>Bu Birimle Alakalı Değil</span>
+                </button>
+              )}
+              {canGeriAl && (
+                <button onClick={() => { setActionData({ action: 'geri_al', note: '' }); setShowAction(true); }} data-testid="geri-al-button" className="bg-white text-red-600 border border-red-300 px-5 py-2 text-sm font-medium hover:bg-red-50 flex items-center gap-2">
+                  <Prohibit size={18} /><span>Geri Al / İptal</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

@@ -153,7 +153,8 @@ async def get_current_user(request: Request) -> dict:
         user.pop("password_hash", None)
         return user
     except jwt.ExpiredSignatureError:
-        logger.warning(f"AUTH FAIL (token expired): path={request.url.path} source={token_source}")
+        # Expected: client's token aged out; this is normal. Log at INFO (not WARNING) to reduce noise.
+        logger.info(f"AUTH: token expired (path={request.url.path} source={token_source}) - client should re-login")
         raise HTTPException(status_code=401, detail="Token expired (please login again)")
     except jwt.InvalidTokenError as e:
         logger.warning(f"AUTH FAIL (invalid token): path={request.url.path} source={token_source} err={e}")
@@ -1176,6 +1177,15 @@ async def mark_notification_read(notification_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Notification not found")
     return {"message": "Marked as read"}
 
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(request: Request):
+    user = await get_current_user(request)
+    result = await db.notifications.update_many(
+        {"user_id": user["id"], "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    return {"modified": result.modified_count}
+
 # ===== ACTIVITY LOGS (ADMIN) =====
 
 @api_router.get("/logs")
@@ -1660,6 +1670,20 @@ async def startup():
     logger.info("Test credentials written to /app/memory/test_credentials.md")
 
 app.include_router(api_router)
+
+# Global exception handler — logs full traceback with file:line for actual errors (500+)
+import traceback as _tb
+from fastapi.responses import JSONResponse as _JSONResponse
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    tb = _tb.format_exc()
+    logger.error(
+        f"UNHANDLED EXCEPTION on {request.method} {request.url.path}\n"
+        f"User-Agent: {request.headers.get('user-agent','-')}\n"
+        f"{tb}"
+    )
+    return _JSONResponse(status_code=500, content={"detail": f"Server error: {type(exc).__name__}: {exc}"})
 
 # CORS: when credentials are enabled, we can't use "*" - use regex to allow any local network origin
 # In production set CORS_ORIGINS to explicit comma-separated list
