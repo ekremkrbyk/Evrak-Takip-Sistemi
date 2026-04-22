@@ -119,25 +119,38 @@ def create_refresh_token(user_id: str) -> str:
 
 async def get_current_user(request: Request) -> dict:
     token = request.cookies.get("access_token")
+    token_source = "cookie"
     if not token:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
+            token_source = "bearer"
     if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        origin = request.headers.get("origin", "-")
+        cookie_header = "yes" if request.headers.get("cookie") else "no"
+        logger.warning(
+            f"AUTH FAIL (no token): path={request.url.path} origin={origin} "
+            f"cookie_header={cookie_header}. Frontend REACT_APP_BACKEND_URL "
+            f"must match this server & cookies must be sent (withCredentials: true + CORS origin match)."
+        )
+        raise HTTPException(status_code=401, detail="Not authenticated (no token)")
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         if payload.get("type") != "access":
+            logger.warning(f"AUTH FAIL (wrong token type): path={request.url.path} type={payload.get('type')}")
             raise HTTPException(status_code=401, detail="Invalid token type")
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
         if not user:
+            logger.warning(f"AUTH FAIL (user not found): path={request.url.path} sub={payload.get('sub')}")
             raise HTTPException(status_code=401, detail="User not found")
         user["id"] = str(user.pop("_id"))
         user.pop("password_hash", None)
         return user
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+        logger.warning(f"AUTH FAIL (token expired): path={request.url.path} source={token_source}")
+        raise HTTPException(status_code=401, detail="Token expired (please login again)")
+    except jwt.InvalidTokenError as e:
+        logger.warning(f"AUTH FAIL (invalid token): path={request.url.path} source={token_source} err={e}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def init_storage():
@@ -246,6 +259,21 @@ async def generate_onay_no(department: str) -> str:
         seq = doc.get("seq", 1) if doc else 1
     return f"{prefix}-{10000 + seq - 1}"
 
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: str, request: Request = None):
+    """Set auth cookies with correct samesite/secure flags based on environment."""
+    is_https = False
+    if request is not None:
+        scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+        is_https = scheme == "https"
+    if is_https:
+        samesite = "none"
+        secure = True
+    else:
+        samesite = "lax"
+        secure = False
+    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure, samesite=samesite, max_age=3600, path="/")
+    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=secure, samesite=samesite, max_age=604800, path="/")
+
 async def get_department_users(department: str, manager_only: bool = False) -> list:
     query = {"department": department}
     if manager_only:
@@ -334,7 +362,7 @@ class PermissionGroupCreate(BaseModel):
 # ===== AUTH ENDPOINTS =====
 
 @api_router.post("/auth/register")
-async def register(data: RegisterRequest, response: Response):
+async def register(data: RegisterRequest, response: Response, request: Request):
     email = data.email.lower()
     existing = await db.users.find_one({"email": email})
     if existing:
@@ -356,8 +384,7 @@ async def register(data: RegisterRequest, response: Response):
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    _set_auth_cookies(response, access_token, refresh_token, request)
     
     await log_activity(user_id, "register", "user", user_id)
     
@@ -367,11 +394,13 @@ async def register(data: RegisterRequest, response: Response):
         "full_name": data.full_name,
         "department": data.department,
         "role": "user",
-        "permissions": []
+        "permissions": [],
+        "is_manager": False,
+        "access_token": access_token,
     }
 
 @api_router.post("/auth/login")
-async def login(data: LoginRequest, response: Response):
+async def login(data: LoginRequest, response: Response, request: Request):
     email = data.email.lower()
     user = await db.users.find_one({"email": email})
     
@@ -382,8 +411,7 @@ async def login(data: LoginRequest, response: Response):
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+    _set_auth_cookies(response, access_token, refresh_token, request)
     
     await log_activity(user_id, "login", "user", user_id)
     
@@ -394,7 +422,8 @@ async def login(data: LoginRequest, response: Response):
         "department": user.get("department", ""),
         "role": user.get("role", "user"),
         "permissions": user.get("permissions", []),
-        "is_manager": bool(user.get("is_manager", False))
+        "is_manager": bool(user.get("is_manager", False)),
+        "access_token": access_token,
     }
 
 @api_router.get("/auth/me")
@@ -1350,13 +1379,29 @@ async def startup():
 
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS: when credentials are enabled, we can't use "*" - use regex to allow any local network origin
+# In production set CORS_ORIGINS to explicit comma-separated list
+_cors_origins_env = os.environ.get('CORS_ORIGINS', '').strip()
+if _cors_origins_env and _cors_origins_env != '*':
+    _origins = [o.strip() for o in _cors_origins_env.split(',') if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=True,
+        allow_origins=_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.info(f"CORS: explicit origins: {_origins}")
+else:
+    # Dev mode: reflect any origin (localhost, 127.0.0.1, 192.168.x.x, 10.x.x.x, *.emergentagent.com, etc.)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_credentials=True,
+        allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]+\.[0-9]+)(:[0-9]+)?|https?://[a-zA-Z0-9-]+\.(preview\.)?emergentagent\.com",
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.info("CORS: dev mode - reflecting localhost/local-network/emergentagent origins")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
