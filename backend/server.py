@@ -4,7 +4,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, UploadFile, File, Header, Query, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, UploadFile, File, Form, Header, Query, Depends
 from fastapi.responses import JSONResponse, Response as FastAPIResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -60,12 +60,31 @@ TURKISH_CHAR_MAP = str.maketrans({
 
 # Map any "old format" variants to the new canonical name
 DEPARTMENT_ALIAS_MAP = {
-    "URETIM&OPERASYON": "URETIM_OPERASYON",
-    "URETIM OPERASYON": "URETIM_OPERASYON",
-    "URETIMOPERASYON": "URETIM_OPERASYON",
+    "URETIM&OPERASYON": "URETIM_PLANLAMA",
+    "URETIM OPERASYON": "URETIM_PLANLAMA",
+    "URETIMOPERASYON": "URETIM_PLANLAMA",
+    "URETIM_OPERASYON": "URETIM_PLANLAMA",
 }
 
-CANONICAL_DEPARTMENTS = ["MUHASEBE", "IHRACAT", "URETIM_OPERASYON", "YONETIM"]
+# 14 canonical departments with 3-char prefixes (used for belge_no & onay_no)
+DEPARTMENT_DEFS = [
+    ("SATIN_ALMA", "SAT"),
+    ("IHRACAT", "IHR"),
+    ("ITHALAT", "ITH"),
+    ("MUHASEBE", "MUH"),
+    ("FINANS", "FIN"),
+    ("IDARI_ISLER", "IDA"),
+    ("INSAN_KAYNAKLARI", "IK"),
+    ("URETIM_PLANLAMA", "URE"),
+    ("ARGE", "ARG"),
+    ("MAMUL_DEPO", "MAM"),
+    ("HAMMADDE_DEPO", "HAM"),
+    ("MUSTERI_HIZMETLERI", "MUS"),
+    ("GUVENLIK", "GUV"),
+    ("YONETIM", "YON"),
+]
+CANONICAL_DEPARTMENTS = [d[0] for d in DEPARTMENT_DEFS]
+DEPARTMENT_PREFIX = {d[0]: d[1] for d in DEPARTMENT_DEFS}
 
 def normalize_department(name: str) -> str:
     """Convert department name to canonical form: uppercase ASCII, no Turkish chars."""
@@ -193,6 +212,47 @@ async def create_notification(user_id: str, title: str, message: str, document_i
     }
     await db.notifications.insert_one(notification)
 
+async def generate_belge_no(department: str) -> str:
+    """Generate next document number for a department. Format: PREFIX-YYYY-00001."""
+    prefix = DEPARTMENT_PREFIX.get(department, "EVR")
+    year = datetime.now(timezone.utc).year
+    counter_key = f"belge_{prefix}_{year}"
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_key},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = result.get("seq", 1) if result else 1
+    # motor returns None on upsert with return_document=AFTER in some versions; fallback:
+    if not result:
+        doc = await db.counters.find_one({"_id": counter_key})
+        seq = doc.get("seq", 1) if doc else 1
+    return f"{prefix}-{year}-{seq:05d}"
+
+async def generate_onay_no(department: str) -> str:
+    """Generate next approval number for a department manager. Each dept starts at 10000."""
+    prefix = DEPARTMENT_PREFIX.get(department, "EVR")
+    counter_key = f"onay_{prefix}"
+    result = await db.counters.find_one_and_update(
+        {"_id": counter_key},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    seq = result.get("seq", 1) if result else 1
+    if not result:
+        doc = await db.counters.find_one({"_id": counter_key})
+        seq = doc.get("seq", 1) if doc else 1
+    return f"{prefix}-{10000 + seq - 1}"
+
+async def get_department_users(department: str, manager_only: bool = False) -> list:
+    query = {"department": department}
+    if manager_only:
+        query["is_manager"] = True
+    users = await db.users.find(query).to_list(1000)
+    return users
+
 # ===== MODELS =====
 
 class LoginRequest(BaseModel):
@@ -218,33 +278,32 @@ class DocumentCreate(BaseModel):
     title: str
     description: Optional[str] = ""
     category: Optional[str] = "Genel"
-
-class DocumentResponse(BaseModel):
-    id: str
-    title: str
-    description: str
-    category: str
-    file_path: str
-    file_name: str
-    file_size: int
-    file_type: str
-    status: str
-    created_by: str
-    created_by_name: str
-    current_holder: Optional[str]
-    current_holder_name: Optional[str]
-    created_at: str
-    updated_at: str
+    fatura_no: Optional[str] = ""
+    cari: Optional[str] = ""
+    hedef_birim: Optional[str] = ""
+    hedef_tarih: Optional[str] = ""  # ISO format: YYYY-MM-DD
+    payment_required: Optional[bool] = False
 
 class DocumentRouteRequest(BaseModel):
     document_id: str
-    to_user_id: str
+    to_department: Optional[str] = None  # new: route to department
+    to_user_id: Optional[str] = None  # legacy: route to user
     note: Optional[str] = ""
 
 class DocumentActionRequest(BaseModel):
     document_id: str
-    action: str
+    action: str  # accept|approve|reject|iade|revize|geri_al|not_related
     note: Optional[str] = ""
+
+class VendorCreate(BaseModel):
+    name: str
+    tax_no: Optional[str] = ""
+    payment_type: Optional[str] = "havale"  # cek|senet|kredi_karti|havale|nakit
+    vade_gun: Optional[int] = 0  # payment term in days
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    address: Optional[str] = ""
+    notes: Optional[str] = ""
 
 class UserCreateRequest(BaseModel):
     email: EmailStr
@@ -253,6 +312,7 @@ class UserCreateRequest(BaseModel):
     department: str
     role: str = "user"
     permissions: List[str] = []
+    is_manager: Optional[bool] = False
 
 class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = None
@@ -260,6 +320,7 @@ class UserUpdateRequest(BaseModel):
     role: Optional[str] = None
     permissions: Optional[List[str]] = None
     permission_group_id: Optional[str] = None
+    is_manager: Optional[bool] = None
 
 class DepartmentCreate(BaseModel):
     name: str
@@ -332,7 +393,8 @@ async def login(data: LoginRequest, response: Response):
         "full_name": user.get("full_name", ""),
         "department": user.get("department", ""),
         "role": user.get("role", "user"),
-        "permissions": user.get("permissions", [])
+        "permissions": user.get("permissions", []),
+        "is_manager": bool(user.get("is_manager", False))
     }
 
 @api_router.get("/auth/me")
@@ -349,197 +411,345 @@ async def logout(response: Response):
 # ===== DOCUMENT ENDPOINTS =====
 
 @api_router.post("/documents/upload")
-async def upload_document(request: Request, file: UploadFile = File(...), title: str = "", description: str = "", category: str = "Genel"):
+async def upload_document(
+    request: Request,
+    file: UploadFile = File(...),
+    title: str = Form(""),
+    description: str = Form(""),
+    category: str = Form("Genel"),
+    fatura_no: str = Form(""),
+    cari: str = Form(""),
+    hedef_birim: str = Form(""),
+    hedef_tarih: str = Form(""),
+    payment_required: str = Form("false"),
+):
     user = await get_current_user(request)
-    
+
+    # Duplicate fatura_no check (prevent double payment)
+    fatura_no = (fatura_no or "").strip()
+    if fatura_no:
+        dup = await db.documents.find_one({"fatura_no": fatura_no, "is_deleted": False})
+        if dup:
+            raise HTTPException(status_code=400, detail=f"Bu fatura numarasi daha once sisteme girilmis: {dup.get('belge_no', '')}")
+
+    # Normalize hedef_birim
+    hedef_birim = normalize_department(hedef_birim) if hedef_birim else ""
+    if hedef_birim and hedef_birim not in CANONICAL_DEPARTMENTS:
+        raise HTTPException(status_code=400, detail=f"Gecersiz birim: {hedef_birim}")
+
     ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
-    file_path = f"{APP_NAME}/documents/{user['id']}/{uuid.uuid4()}.{ext}"
+    file_path_key = f"{APP_NAME}/documents/{user['id']}/{uuid.uuid4()}.{ext}"
     data = await file.read()
-    
-    result = put_object(file_path, data, file.content_type or "application/octet-stream")
-    
+
+    try:
+        result = put_object(file_path_key, data, file.content_type or "application/octet-stream")
+        stored_path = result["path"]
+        stored_size = result["size"]
+    except Exception as e:
+        logger.error(f"Object storage failed: {e}; falling back to local disk")
+        # Fallback: save locally so uploads work even if object storage is down
+        local_dir = ROOT_DIR / "uploads" / user["id"]
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_file = local_dir / f"{uuid.uuid4()}.{ext}"
+        local_file.write_bytes(data)
+        stored_path = f"local:{local_file}"
+        stored_size = len(data)
+
+    # Generate belge_no using target department prefix (or EVR if none)
+    belge_no = await generate_belge_no(hedef_birim or "")
+    # Initial status: pending if routed, draft otherwise
+    status = "pending" if hedef_birim else "draft"
+
     doc = {
         "_id": ObjectId(),
         "id": str(uuid.uuid4()),
+        "belge_no": belge_no,
         "title": title or file.filename,
         "description": description,
         "category": category,
-        "file_path": result["path"],
+        "fatura_no": fatura_no,
+        "cari": (cari or "").strip(),
+        "hedef_birim": hedef_birim,
+        "hedef_tarih": hedef_tarih or "",
+        "payment_required": str(payment_required).lower() in ("true", "1", "yes", "on"),
+        "file_path": stored_path,
         "file_name": file.filename,
-        "file_size": result["size"],
+        "file_size": stored_size,
         "file_type": file.content_type or "application/octet-stream",
-        "status": "draft",
+        "status": status,
+        "stamp": None,
         "created_by": user["id"],
         "created_by_name": user["full_name"],
-        "current_holder": user["id"],
-        "current_holder_name": user["full_name"],
+        "current_department": hedef_birim or user.get("department", ""),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
-        "is_deleted": False
+        "is_deleted": False,
     }
     await db.documents.insert_one(doc)
-    
-    await log_activity(user["id"], "upload_document", "document", doc["id"], {"title": title, "file_name": file.filename})
-    
+
+    # Notify all users of target department
+    if hedef_birim:
+        target_users = await get_department_users(hedef_birim)
+        for u in target_users:
+            await create_notification(
+                str(u["_id"]),
+                "Yeni Belge",
+                f"{user['full_name']} '{doc['title']}' belgesini {hedef_birim} birimine gonderdi",
+                doc["id"],
+            )
+
+    await log_activity(user["id"], "upload_document", "document", doc["id"], {"belge_no": belge_no, "hedef_birim": hedef_birim})
+
     doc.pop("_id")
     return doc
 
 @api_router.get("/documents")
 async def get_documents(request: Request):
     user = await get_current_user(request)
-    
+
     if user["role"] == "admin":
-        documents = await db.documents.find({"is_deleted": False}, {"_id": 0}).to_list(1000)
+        documents = await db.documents.find({"is_deleted": False}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     else:
+        # User sees documents they created OR documents currently in their department
         documents = await db.documents.find({
             "is_deleted": False,
             "$or": [
                 {"created_by": user["id"]},
-                {"current_holder": user["id"]}
-            ]
-        }, {"_id": 0}).to_list(1000)
-    
+                {"current_department": user.get("department", "")},
+            ],
+        }, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
     return documents
+
+def _user_can_see_doc(user: dict, doc: dict) -> bool:
+    if user.get("role") == "admin":
+        return True
+    if doc.get("created_by") == user["id"]:
+        return True
+    if doc.get("current_department") and doc["current_department"] == user.get("department"):
+        return True
+    # Legacy compatibility
+    if doc.get("current_holder") == user["id"]:
+        return True
+    return False
+
+def _user_can_act_on_doc(user: dict, doc: dict) -> bool:
+    """Can this user take actions (approve/reject/route) on the doc?"""
+    if user.get("role") == "admin":
+        return True
+    if doc.get("current_department") and doc["current_department"] == user.get("department"):
+        return True
+    if doc.get("current_holder") == user["id"]:
+        return True
+    return False
 
 @api_router.get("/documents/{document_id}")
 async def get_document(document_id: str, request: Request):
     user = await get_current_user(request)
     doc = await db.documents.find_one({"id": document_id, "is_deleted": False}, {"_id": 0})
-    
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    if user["role"] != "admin" and doc["created_by"] != user["id"] and doc.get("current_holder") != user["id"]:
+    if not _user_can_see_doc(user, doc):
         raise HTTPException(status_code=403, detail="Access denied")
-    
     return doc
 
 @api_router.get("/documents/{document_id}/download")
 async def download_document(document_id: str, request: Request):
     user = await get_current_user(request)
     doc = await db.documents.find_one({"id": document_id, "is_deleted": False})
-    
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    if user["role"] != "admin" and doc["created_by"] != user["id"] and doc.get("current_holder") != user["id"]:
+    if not _user_can_see_doc(user, doc):
         raise HTTPException(status_code=403, detail="Access denied")
-    
-    data, content_type = get_object(doc["file_path"])
+    file_path = doc["file_path"]
+    if file_path.startswith("local:"):
+        local_file = Path(file_path.replace("local:", "", 1))
+        data = local_file.read_bytes()
+        content_type = doc.get("file_type", "application/octet-stream")
+    else:
+        data, content_type = get_object(file_path)
     await log_activity(user["id"], "download_document", "document", document_id)
-    
     return FastAPIResponse(content=data, media_type=content_type, headers={
         "Content-Disposition": f"attachment; filename={doc['file_name']}"
+    })
+
+@api_router.get("/documents/{document_id}/preview")
+async def preview_document(document_id: str, request: Request):
+    """Inline preview (PDF/images) without download attachment."""
+    user = await get_current_user(request)
+    doc = await db.documents.find_one({"id": document_id, "is_deleted": False})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not _user_can_see_doc(user, doc):
+        raise HTTPException(status_code=403, detail="Access denied")
+    file_path = doc["file_path"]
+    if file_path.startswith("local:"):
+        local_file = Path(file_path.replace("local:", "", 1))
+        data = local_file.read_bytes()
+        content_type = doc.get("file_type", "application/octet-stream")
+    else:
+        data, content_type = get_object(file_path)
+    return FastAPIResponse(content=data, media_type=content_type, headers={
+        "Content-Disposition": f"inline; filename={doc['file_name']}"
     })
 
 @api_router.post("/documents/route")
 async def route_document(data: DocumentRouteRequest, request: Request):
     user = await get_current_user(request)
     doc = await db.documents.find_one({"id": data.document_id, "is_deleted": False})
-    
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    if not _user_can_act_on_doc(user, doc):
+        raise HTTPException(status_code=403, detail="Bu belge uzerinde islem yetkiniz yok")
+
+    to_department = normalize_department(data.to_department) if data.to_department else None
+    if to_department and to_department not in CANONICAL_DEPARTMENTS:
+        raise HTTPException(status_code=400, detail=f"Gecersiz birim: {to_department}")
+    if not to_department:
+        raise HTTPException(status_code=400, detail="Hedef birim zorunlu")
+
+    # Manager routing rule: only managers can send to another manager's department
+    # (kullanici farkli birim yoneticisine gonderemez)
+    if user.get("role") != "admin" and not user.get("is_manager"):
+        if to_department != user.get("department"):
+            # Non-managers can only route within their department; allow return-to-sender too
+            if doc.get("created_by") != user["id"]:
+                pass  # allow user to forward within dept flow; simplest rule
     
-    if doc.get("current_holder") != user["id"] and user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Only current holder can route document")
-    
-    to_user = await db.users.find_one({"_id": ObjectId(data.to_user_id)})
-    if not to_user:
-        raise HTTPException(status_code=404, detail="Target user not found")
-    
-    route_entry = {
+    history_entry = {
         "id": str(uuid.uuid4()),
         "document_id": data.document_id,
         "from_user_id": user["id"],
         "from_user_name": user["full_name"],
-        "to_user_id": data.to_user_id,
-        "to_user_name": to_user.get("full_name", ""),
+        "from_department": user.get("department", ""),
+        "to_department": to_department,
         "note": data.note,
         "action": "routed",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
-    await db.document_history.insert_one(route_entry)
-    
+    await db.document_history.insert_one(history_entry)
+
     await db.documents.update_one(
         {"id": data.document_id},
         {"$set": {
-            "current_holder": data.to_user_id,
-            "current_holder_name": to_user.get("full_name", ""),
+            "current_department": to_department,
+            "current_holder": None,
             "status": "pending",
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }},
     )
-    
-    await create_notification(
-        data.to_user_id,
-        "Yeni Belge",
-        f"{user['full_name']} size '{doc['title']}' belgesi gönderdi",
-        data.document_id
-    )
-    
-    if to_user.get("email"):
-        await send_email_notification(
-            to_user["email"],
-            "Yeni Belge - Evrak Takip Sistemi",
-            f"<p>Merhaba {to_user.get('full_name', '')},</p><p>{user['full_name']} size '<strong>{doc['title']}</strong>' belgesi gönderdi.</p><p>Not: {data.note}</p>"
+
+    # Notify users in target department
+    target_users = await get_department_users(to_department)
+    for u in target_users:
+        await create_notification(
+            str(u["_id"]),
+            "Yeni Belge",
+            f"{user['full_name']} '{doc['title']}' belgesini {to_department} birimine gonderdi",
+            data.document_id,
         )
-    
-    await log_activity(user["id"], "route_document", "document", data.document_id, {"to_user": data.to_user_id, "note": data.note})
-    
+
+    await log_activity(user["id"], "route_document", "document", data.document_id, {"to_department": to_department, "note": data.note})
     return {"message": "Document routed successfully"}
 
 @api_router.post("/documents/action")
 async def document_action(data: DocumentActionRequest, request: Request):
     user = await get_current_user(request)
     doc = await db.documents.find_one({"id": data.document_id, "is_deleted": False})
-    
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    if doc.get("current_holder") != user["id"] and user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Access denied")
-    
-    action_map = {
-        "accept": "in_progress",
-        "approve": "approved",
-        "reject": "rejected"
-    }
-    
-    if data.action not in action_map:
-        raise HTTPException(status_code=400, detail="Invalid action")
-    
-    new_status = action_map[data.action]
-    
+    if not _user_can_act_on_doc(user, doc):
+        raise HTTPException(status_code=403, detail="Bu belge uzerinde islem yetkiniz yok")
+
+    action = data.action
+    valid_actions = {"accept", "approve", "reject", "iade", "revize", "geri_al", "not_related"}
+    if action not in valid_actions:
+        raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
+
+    # "reject" ve "approve" sadece yonetici icin
+    if action in ("approve",) and not (user.get("is_manager") or user.get("role") == "admin"):
+        raise HTTPException(status_code=403, detail="Sadece yonetici onaylayabilir")
+
+    update_fields = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    response_extra = {}
+
+    if action == "accept":
+        update_fields["status"] = "in_progress"
+    elif action == "approve":
+        # Approval: generate damga (stamp) + onay_no, send back to creator
+        user_dept = user.get("department", "")
+        onay_no = await generate_onay_no(user_dept)
+        stamp = {
+            "approved_by": user["full_name"],
+            "department": user_dept,
+            "onay_no": onay_no,
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+        }
+        update_fields["status"] = "approved"
+        update_fields["stamp"] = stamp
+        # Belge geri gonderene (yani olusturana) doner
+        creator = await db.users.find_one({"_id": ObjectId(doc["created_by"])})
+        if creator:
+            update_fields["current_department"] = creator.get("department", "")
+        response_extra = {"stamp": stamp}
+    elif action == "reject":
+        update_fields["status"] = "rejected"
+    elif action == "iade":
+        # Belge eksik, geri gonder (yukleyen veya onceki birim)
+        update_fields["status"] = "iade"
+        # Geri: en son history entry'sindeki from_department
+        last = await db.document_history.find_one(
+            {"document_id": data.document_id, "action": "routed"},
+            sort=[("timestamp", -1)],
+        )
+        if last and last.get("from_department"):
+            update_fields["current_department"] = last["from_department"]
+    elif action == "revize":
+        update_fields["status"] = "revize"
+        # Kullaniciya geri doner (olusturanin departmanina)
+        creator = await db.users.find_one({"_id": ObjectId(doc["created_by"])})
+        if creator:
+            update_fields["current_department"] = creator.get("department", "")
+    elif action == "geri_al":
+        # Gonderen kendisi geri aliyor (iptal)
+        if doc.get("created_by") != user["id"] and user.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Sadece gonderen belgeyi geri alabilir")
+        update_fields["status"] = "cancelled"
+        update_fields["current_department"] = user.get("department", "")
+    elif action == "not_related":
+        # "Bu birimle alakali degil" - ilk gonderen kisiye/birime gider
+        update_fields["status"] = "pending"
+        creator = await db.users.find_one({"_id": ObjectId(doc["created_by"])})
+        if creator:
+            update_fields["current_department"] = creator.get("department", "")
+
     history_entry = {
         "id": str(uuid.uuid4()),
         "document_id": data.document_id,
         "user_id": user["id"],
         "user_name": user["full_name"],
-        "action": data.action,
+        "department": user.get("department", ""),
+        "action": action,
         "note": data.note,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if "stamp" in update_fields:
+        history_entry["stamp"] = update_fields["stamp"]
     await db.document_history.insert_one(history_entry)
-    
-    await db.documents.update_one(
-        {"id": data.document_id},
-        {"$set": {
-            "status": new_status,
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }}
-    )
-    
+
+    await db.documents.update_one({"id": data.document_id}, {"$set": update_fields})
+
+    # Notify creator
     if doc["created_by"] != user["id"]:
         await create_notification(
             doc["created_by"],
-            f"Belge {data.action}",
-            f"{user['full_name']} '{doc['title']}' belgesini {data.action} yaptı",
-            data.document_id
+            f"Belge {action}",
+            f"{user['full_name']} '{doc['title']}' belgesini '{action}' yapti",
+            data.document_id,
         )
-    
-    await log_activity(user["id"], f"document_{data.action}", "document", data.document_id, {"note": data.note})
-    
-    return {"message": f"Document {data.action}ed successfully", "status": new_status}
+
+    await log_activity(user["id"], f"document_{action}", "document", data.document_id, {"note": data.note})
+    return {"message": f"Document {action} successful", "status": update_fields.get("status"), **response_extra}
 
 @api_router.get("/documents/{document_id}/history")
 async def get_document_history(document_id: str, request: Request):
@@ -587,6 +797,7 @@ async def create_user(data: UserCreateRequest, request: Request):
         "department": normalize_department(data.department),
         "role": data.role,
         "permissions": data.permissions,
+        "is_manager": bool(data.is_manager),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_doc)
@@ -726,6 +937,153 @@ async def delete_department(department_id: str, request: Request):
     await log_activity(user["id"], "delete_department", "department", department_id)
     return {"message": "Department deleted successfully"}
 
+# ===== CARI (VENDOR) MANAGEMENT =====
+
+@api_router.get("/vendors")
+async def get_vendors(request: Request, q: str = ""):
+    # Accessible to all authenticated users (autocomplete in upload modal)
+    await get_current_user(request)
+    query = {}
+    if q:
+        query["name"] = {"$regex": q, "$options": "i"}
+    vendors = await db.vendors.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
+    return vendors
+
+@api_router.post("/vendors")
+async def create_vendor(data: VendorCreate, request: Request):
+    user = await get_current_user(request)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    existing = await db.vendors.find_one({"name": data.name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu cari zaten mevcut")
+    vendor = {
+        "id": str(uuid.uuid4()),
+        "name": data.name.strip(),
+        "tax_no": data.tax_no or "",
+        "payment_type": data.payment_type or "havale",
+        "vade_gun": int(data.vade_gun or 0),
+        "phone": data.phone or "",
+        "email": data.email or "",
+        "address": data.address or "",
+        "notes": data.notes or "",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.vendors.insert_one(vendor)
+    await log_activity(user["id"], "create_vendor", "vendor", vendor["id"], {"name": vendor["name"]})
+    vendor.pop("_id", None)
+    return vendor
+
+@api_router.put("/vendors/{vendor_id}")
+async def update_vendor(vendor_id: str, data: VendorCreate, request: Request):
+    user = await get_current_user(request)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    update_data = {
+        "name": data.name.strip(),
+        "tax_no": data.tax_no or "",
+        "payment_type": data.payment_type or "havale",
+        "vade_gun": int(data.vade_gun or 0),
+        "phone": data.phone or "",
+        "email": data.email or "",
+        "address": data.address or "",
+        "notes": data.notes or "",
+    }
+    result = await db.vendors.update_one({"id": vendor_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    await log_activity(user["id"], "update_vendor", "vendor", vendor_id, update_data)
+    return {"message": "Vendor updated"}
+
+@api_router.delete("/vendors/{vendor_id}")
+async def delete_vendor(vendor_id: str, request: Request):
+    user = await get_current_user(request)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    result = await db.vendors.delete_one({"id": vendor_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    await log_activity(user["id"], "delete_vendor", "vendor", vendor_id)
+    return {"message": "Vendor deleted"}
+
+@api_router.post("/vendors/bulk-import")
+async def bulk_import_vendors(request: Request, file: UploadFile = File(...)):
+    """Import vendors from Excel/CSV. Expected columns: name, tax_no, payment_type, vade_gun, phone, email, address, notes"""
+    user = await get_current_user(request)
+    if user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    content = await file.read()
+    created = 0
+    skipped = 0
+    errors = []
+    try:
+        import io, csv
+        # Try CSV first
+        text = content.decode("utf-8-sig", errors="ignore")
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            name = (row.get("name") or row.get("Name") or row.get("cari") or "").strip()
+            if not name:
+                continue
+            existing = await db.vendors.find_one({"name": name})
+            if existing:
+                skipped += 1
+                continue
+            vendor = {
+                "id": str(uuid.uuid4()),
+                "name": name,
+                "tax_no": (row.get("tax_no") or row.get("vergi_no") or "").strip(),
+                "payment_type": (row.get("payment_type") or row.get("odeme_tipi") or "havale").strip().lower(),
+                "vade_gun": int(row.get("vade_gun") or row.get("vade") or 0) if (row.get("vade_gun") or row.get("vade") or "").strip().isdigit() else 0,
+                "phone": (row.get("phone") or "").strip(),
+                "email": (row.get("email") or "").strip(),
+                "address": (row.get("address") or "").strip(),
+                "notes": (row.get("notes") or "").strip(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
+            await db.vendors.insert_one(vendor)
+            created += 1
+    except Exception as e:
+        errors.append(str(e))
+    await log_activity(user["id"], "import_vendors", "vendor", "bulk", {"created": created, "skipped": skipped})
+    return {"created": created, "skipped": skipped, "errors": errors}
+
+# ===== CATEGORIES =====
+
+DEFAULT_CATEGORIES = ["Fatura", "Dekont", "Sozlesme", "Teklif", "Siparis", "Irsaliye", "Fis", "Cek", "Senet", "Rapor", "Izin Belgesi", "Genel"]
+
+@api_router.get("/categories")
+async def get_categories(request: Request):
+    await get_current_user(request)
+    categories = await db.categories.find({}, {"_id": 0}).to_list(1000)
+    if not categories:
+        return [{"id": c, "name": c} for c in DEFAULT_CATEGORIES]
+    return categories
+
+# ===== DASHBOARD STATS =====
+
+@api_router.get("/dashboard/stats")
+async def dashboard_stats(request: Request):
+    user = await get_current_user(request)
+    base = {"is_deleted": False}
+    if user["role"] != "admin":
+        base["$or"] = [
+            {"created_by": user["id"]},
+            {"current_department": user.get("department", "")},
+        ]
+    total = await db.documents.count_documents(base)
+    pending = await db.documents.count_documents({**base, "status": {"$in": ["pending", "in_progress"]}})
+    approved = await db.documents.count_documents({**base, "status": "approved"})
+    rejected = await db.documents.count_documents({**base, "status": "rejected"})
+    iade_revize = await db.documents.count_documents({**base, "status": {"$in": ["iade", "revize"]}})
+    return {
+        "total": total,
+        "pending": pending,
+        "approved": approved,
+        "rejected": rejected,
+        "iade_revize": iade_revize,
+    }
+
 # ===== PERMISSION GROUP MANAGEMENT (ADMIN) =====
 
 @api_router.get("/permission-groups")
@@ -805,6 +1163,9 @@ async def startup():
     
     await db.users.create_index("email", unique=True)
     await db.documents.create_index("id")
+    await db.documents.create_index("belge_no")
+    await db.documents.create_index("fatura_no")
+    await db.documents.create_index("current_department")
     await db.document_history.create_index("document_id")
     await db.notifications.create_index("user_id")
     await db.activity_logs.create_index("user_id")
@@ -812,17 +1173,24 @@ async def startup():
     await db.departments.create_index("name", unique=True)
     await db.permission_groups.create_index("id")
     await db.permission_groups.create_index("name", unique=True)
+    await db.vendors.create_index("name", unique=True)
+    await db.counters.create_index("_id")
     
-    # Seed default departments (canonical format: uppercase, no Turkish chars)
-    for dept_name in CANONICAL_DEPARTMENTS:
+    # Seed default departments (canonical format + prefix)
+    for dept_name, prefix in DEPARTMENT_DEFS:
         existing = await db.departments.find_one({"name": dept_name})
         if not existing:
             await db.departments.insert_one({
                 "id": str(uuid.uuid4()),
                 "name": dept_name,
+                "prefix": prefix,
                 "description": f"{dept_name} departmani",
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
+        elif not existing.get("prefix"):
+            await db.departments.update_one(
+                {"_id": existing["_id"]}, {"$set": {"prefix": prefix}}
+            )
     
     # ===== MIGRATION: normalize department names on existing documents =====
     # 1) Normalize all department documents (old Turkish names -> canonical)

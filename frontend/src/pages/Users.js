@@ -20,7 +20,8 @@ const Users = () => {
     department: '',
     role: 'user',
     permissions: [],
-    permission_group_id: ''
+    permission_group_id: '',
+    is_manager: false
   });
 
   useEffect(() => {
@@ -53,7 +54,8 @@ const Users = () => {
           department: formData.department,
           role: formData.role,
           permissions: formData.permissions,
-          permission_group_id: formData.permission_group_id
+          permission_group_id: formData.permission_group_id,
+          is_manager: formData.is_manager
         }, { withCredentials: true });
         toast.success('Kullanıcı güncellendi');
       } else {
@@ -77,7 +79,8 @@ const Users = () => {
       department: user.department,
       role: user.role,
       permissions: user.permissions || [],
-      permission_group_id: user.permission_group_id || ''
+      permission_group_id: user.permission_group_id || '',
+      is_manager: !!user.is_manager
     });
     setShowModal(true);
   };
@@ -102,7 +105,8 @@ const Users = () => {
       department: departments[0]?.name || '',
       role: 'user',
       permissions: [],
-      permission_group_id: ''
+      permission_group_id: '',
+      is_manager: false
     });
   };
 
@@ -163,13 +167,18 @@ const Users = () => {
                     <td className="py-4 px-4 text-sm text-slate-600">{user.email}</td>
                     <td className="py-4 px-4 text-sm text-slate-600">{user.department}</td>
                     <td className="py-4 px-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium border ${
-                        user.role === 'admin' 
-                          ? 'bg-slate-900 text-white border-slate-900' 
-                          : 'bg-slate-100 text-slate-700 border-slate-300'
-                      }`}>
-                        {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
-                      </span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium border ${
+                          user.role === 'admin' 
+                            ? 'bg-slate-900 text-white border-slate-900' 
+                            : 'bg-slate-100 text-slate-700 border-slate-300'
+                        }`}>
+                          {user.role === 'admin' ? 'Admin' : 'Kullanıcı'}
+                        </span>
+                        {user.is_manager && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-medium border bg-amber-50 text-amber-700 border-amber-300" data-testid={`manager-badge-${user.id}`}>Yönetici</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-4 text-sm text-slate-600">
                       {new Date(user.created_at).toLocaleDateString('tr-TR')}
@@ -294,6 +303,21 @@ const Users = () => {
                     <option value="user">Kullanıcı</option>
                     <option value="admin">Admin</option>
                   </select>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200">
+                  <input
+                    type="checkbox"
+                    id="is_manager"
+                    checked={formData.is_manager}
+                    onChange={(e) => setFormData({...formData, is_manager: e.target.checked})}
+                    data-testid="checkbox-is-manager"
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="is_manager" className="text-sm text-slate-700 cursor-pointer">
+                    <span className="font-medium">Birim Yöneticisi</span>
+                    <span className="text-xs text-slate-500 ml-2">(Bu birimdeki belgeleri onaylayabilir, damga basabilir)</span>
+                  </label>
                 </div>
                 
                 <div>

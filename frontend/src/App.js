@@ -8,6 +8,7 @@ import Documents from './pages/Documents';
 import DocumentDetail from './pages/DocumentDetail';
 import Users from './pages/Users';
 import Departments from './pages/Departments';
+import Vendors from './pages/Vendors';
 import PermissionGroups from './pages/PermissionGroups';
 import Logs from './pages/Logs';
 import './App.css';
@@ -23,6 +24,7 @@ function App() {
           <Route path="/documents/:id" element={<ProtectedRoute><DocumentDetail /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute adminOnly><Users /></ProtectedRoute>} />
           <Route path="/departments" element={<ProtectedRoute adminOnly><Departments /></ProtectedRoute>} />
+          <Route path="/vendors" element={<ProtectedRoute adminOnly><Vendors /></ProtectedRoute>} />
           <Route path="/permission-groups" element={<ProtectedRoute adminOnly><PermissionGroups /></ProtectedRoute>} />
           <Route path="/logs" element={<ProtectedRoute adminOnly><Logs /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" />} />

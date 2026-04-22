@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Bell, FileText, Users, ClipboardText, SignOut, X } from '@phosphor-icons/react';
+import { Bell, FileText, Users, ClipboardText, SignOut, X, Wallet, Buildings } from '@phosphor-icons/react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -17,12 +17,32 @@ const Layout = ({ children }) => {
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
+    // Request browser notification permission on mount
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
     return () => clearInterval(interval);
   }, []);
+
+  // Track seen notification IDs to fire desktop notifications only for new ones
+  const seenIdsRef = React.useRef(new Set());
 
   const fetchNotifications = async () => {
     try {
       const { data } = await axios.get(`${API}/notifications`, { withCredentials: true });
+      // Desktop notification for newly arrived unread notifications
+      if ('Notification' in window && Notification.permission === 'granted') {
+        data.forEach((n) => {
+          if (!n.is_read && !seenIdsRef.current.has(n.id)) {
+            try {
+              new Notification(n.title || 'Evrak Takip', { body: n.message || '', tag: n.id });
+            } catch (_) {}
+          }
+          seenIdsRef.current.add(n.id);
+        });
+      } else {
+        data.forEach((n) => seenIdsRef.current.add(n.id));
+      }
       setNotifications(data);
       setUnreadCount(data.filter(n => !n.is_read).length);
     } catch (error) {
@@ -98,8 +118,19 @@ const Layout = ({ children }) => {
                   isActive('/departments') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
                 }`}
               >
-                <ClipboardText size={20} weight={isActive('/departments') ? 'fill' : 'regular'} />
+                <Buildings size={20} weight={isActive('/departments') ? 'fill' : 'regular'} />
                 <span>Birimler</span>
+              </Link>
+              
+              <Link
+                to="/vendors"
+                data-testid="nav-vendors"
+                className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium transition-colors ${
+                  isActive('/vendors') ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Wallet size={20} weight={isActive('/vendors') ? 'fill' : 'regular'} />
+                <span>Cari Hesaplar</span>
               </Link>
               
               <Link
@@ -156,6 +187,7 @@ const Layout = ({ children }) => {
               {location.pathname.startsWith('/documents/') && 'Belge Detayı'}
               {location.pathname === '/users' && 'Kullanıcı Yönetimi'}
               {location.pathname === '/departments' && 'Birim Yönetimi'}
+              {location.pathname === '/vendors' && 'Cari Hesaplar'}
               {location.pathname === '/permission-groups' && 'Yetki Grupları'}
               {location.pathname === '/logs' && 'Sistem Logları'}
             </h2>
