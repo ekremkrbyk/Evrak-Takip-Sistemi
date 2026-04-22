@@ -1161,20 +1161,39 @@ async def startup():
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
     
-    await db.users.create_index("email", unique=True)
-    await db.documents.create_index("id")
-    await db.documents.create_index("belge_no")
-    await db.documents.create_index("fatura_no")
-    await db.documents.create_index("current_department")
-    await db.document_history.create_index("document_id")
-    await db.notifications.create_index("user_id")
-    await db.activity_logs.create_index("user_id")
-    await db.departments.create_index("id")
-    await db.departments.create_index("name", unique=True)
-    await db.permission_groups.create_index("id")
-    await db.permission_groups.create_index("name", unique=True)
-    await db.vendors.create_index("name", unique=True)
-    await db.counters.create_index("_id")
+    async def safe_create_index(collection, keys, **kwargs):
+        """Create index, gracefully handle conflicts with existing indexes from older schemas."""
+        try:
+            await collection.create_index(keys, **kwargs)
+        except Exception as e:
+            msg = str(e)
+            # Index name conflict -> drop old one and recreate
+            if "IndexKeySpecsConflict" in msg or "already exists with different options" in msg or "code': 86" in msg:
+                try:
+                    idx_name = keys + "_1" if isinstance(keys, str) else None
+                    if idx_name:
+                        await collection.drop_index(idx_name)
+                        await collection.create_index(keys, **kwargs)
+                        logger.info(f"Rebuilt index {idx_name} on {collection.name}")
+                        return
+                except Exception as e2:
+                    logger.warning(f"Index rebuild failed on {collection.name}/{keys}: {e2}")
+            logger.warning(f"Index create skipped on {collection.name}/{keys}: {e}")
+
+    await safe_create_index(db.users, "email", unique=True)
+    await safe_create_index(db.documents, "id")
+    await safe_create_index(db.documents, "belge_no")
+    await safe_create_index(db.documents, "fatura_no")
+    await safe_create_index(db.documents, "current_department")
+    await safe_create_index(db.document_history, "document_id")
+    await safe_create_index(db.notifications, "user_id")
+    await safe_create_index(db.activity_logs, "user_id")
+    await safe_create_index(db.departments, "id")
+    await safe_create_index(db.departments, "name", unique=True)
+    await safe_create_index(db.permission_groups, "id")
+    await safe_create_index(db.permission_groups, "name", unique=True)
+    await safe_create_index(db.vendors, "name", unique=True)
+    await safe_create_index(db.counters, "_id")
     
     # Seed default departments (canonical format + prefix)
     for dept_name, prefix in DEPARTMENT_DEFS:
