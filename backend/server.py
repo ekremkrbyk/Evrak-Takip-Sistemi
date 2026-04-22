@@ -21,6 +21,12 @@ import requests
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 import secrets
+import io
+from PIL import Image, ImageDraw, ImageFont
+from pypdf import PdfReader, PdfWriter
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas as pdf_canvas
+from reportlab.lib.colors import Color
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -274,6 +280,136 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str,
     response.set_cookie(key="access_token", value=access_token, httponly=True, secure=secure, samesite=samesite, max_age=3600, path="/")
     response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=secure, samesite=samesite, max_age=604800, path="/")
 
+def _read_file_bytes(file_path: str) -> bytes:
+    if file_path.startswith("local:"):
+        return Path(file_path.replace("local:", "", 1)).read_bytes()
+    data, _ct = get_object(file_path)
+    return data
+
+def _write_file_bytes(original_path: str, data: bytes, content_type: str, suffix: str = "_stamped") -> str:
+    """Write bytes next to original. Returns new path."""
+    if original_path.startswith("local:"):
+        p = Path(original_path.replace("local:", "", 1))
+        new_p = p.with_name(p.stem + suffix + p.suffix)
+        new_p.write_bytes(data)
+        return f"local:{new_p}"
+    # Object storage: generate a new path and upload
+    base = original_path.rsplit("/", 1)
+    new_key = f"{base[0]}/{uuid.uuid4()}{suffix}_{base[1].split('.')[-1] if '.' in base[1] else 'bin'}"
+    try:
+        result = put_object(new_key, data, content_type)
+        return result["path"]
+    except Exception:
+        # Fallback to local
+        local_dir = ROOT_DIR / "uploads" / "stamped"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_file = local_dir / f"{uuid.uuid4()}{suffix}.bin"
+        local_file.write_bytes(data)
+        return f"local:{local_file}"
+
+def render_stamp_on_image(image_bytes: bytes, stamp: dict) -> bytes:
+    """Draw stamp rectangle on bottom-right of image."""
+    try:
+        img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+    except Exception as e:
+        logger.warning(f"Stamp on image failed (not a valid image): {e}")
+        return image_bytes
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    w, h = img.size
+    box_w = min(360, int(w * 0.35))
+    box_h = 100
+    x0 = w - box_w - 20
+    y0 = h - box_h - 20
+    x1 = w - 20
+    y1 = h - 20
+    # Green border rectangle
+    draw.rectangle([x0, y0, x1, y1], outline=(20, 120, 40, 255), width=4, fill=(255, 255, 255, 230))
+    try:
+        font_title = ImageFont.truetype("DejaVuSans-Bold.ttf", 14)
+        font_body = ImageFont.truetype("DejaVuSans.ttf", 12)
+    except Exception:
+        font_title = ImageFont.load_default()
+        font_body = ImageFont.load_default()
+    text_lines = [
+        ("ONAYLANDI", font_title, (20, 120, 40, 255)),
+        (f"{stamp.get('approved_by','')}", font_body, (20, 80, 20, 255)),
+        (f"{stamp.get('department','')} - {stamp.get('onay_no','')}", font_body, (20, 80, 20, 255)),
+        (stamp.get('approved_at', '')[:19].replace('T', ' '), font_body, (80, 80, 80, 255)),
+    ]
+    y = y0 + 8
+    for text, font, color in text_lines:
+        draw.text((x0 + 10, y), text, fill=color, font=font)
+        y += 20
+    out = Image.alpha_composite(img, overlay)
+    buf = io.BytesIO()
+    fmt = "PNG"
+    out.convert("RGB").save(buf, format="JPEG", quality=92) if out.mode != "RGBA" else out.save(buf, format=fmt)
+    return buf.getvalue()
+
+def render_stamp_on_pdf(pdf_bytes: bytes, stamp: dict) -> bytes:
+    """Overlay a stamp on every page of the PDF (bottom-right corner)."""
+    try:
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+    except Exception as e:
+        logger.warning(f"Stamp on pdf failed to read: {e}")
+        return pdf_bytes
+    writer = PdfWriter()
+    for page in reader.pages:
+        try:
+            w = float(page.mediabox.width)
+            h = float(page.mediabox.height)
+        except Exception:
+            w, h = A4
+        overlay_buf = io.BytesIO()
+        c = pdf_canvas.Canvas(overlay_buf, pagesize=(w, h))
+        box_w = min(240, w * 0.4)
+        box_h = 80
+        x = w - box_w - 20
+        y = 20
+        c.setFillColor(Color(1, 1, 1, alpha=0.9))
+        c.setStrokeColor(Color(0.08, 0.47, 0.16, alpha=1))
+        c.setLineWidth(2)
+        c.rect(x, y, box_w, box_h, fill=1, stroke=1)
+        c.setFillColor(Color(0.08, 0.47, 0.16, alpha=1))
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(x + 8, y + box_h - 16, "ONAYLANDI")
+        c.setFillColor(Color(0.1, 0.3, 0.1, alpha=1))
+        c.setFont("Helvetica", 9)
+        c.drawString(x + 8, y + box_h - 32, str(stamp.get("approved_by", ""))[:35])
+        c.drawString(x + 8, y + box_h - 46, f"{stamp.get('department','')} - {stamp.get('onay_no','')}")
+        c.setFillColor(Color(0.35, 0.35, 0.35, alpha=1))
+        c.setFont("Helvetica", 8)
+        c.drawString(x + 8, y + box_h - 62, stamp.get("approved_at", "")[:19].replace("T", " "))
+        c.save()
+        overlay_pdf = PdfReader(io.BytesIO(overlay_buf.getvalue()))
+        page.merge_page(overlay_pdf.pages[0])
+        writer.add_page(page)
+    out_buf = io.BytesIO()
+    writer.write(out_buf)
+    return out_buf.getvalue()
+
+async def apply_stamp_to_file(doc: dict, stamp: dict) -> dict:
+    """Apply stamp physically on image/pdf. Returns fields to update on the doc."""
+    file_type = (doc.get("file_type") or "").lower()
+    try:
+        original = _read_file_bytes(doc["file_path"])
+    except Exception as e:
+        logger.warning(f"Stamp skipped - cannot read original file: {e}")
+        return {}
+    try:
+        if file_type.startswith("image/"):
+            new_bytes = render_stamp_on_image(original, stamp)
+            new_path = _write_file_bytes(doc["file_path"], new_bytes, doc.get("file_type", "image/jpeg"))
+            return {"file_path": new_path, "file_size": len(new_bytes)}
+        elif "pdf" in file_type or doc.get("file_name", "").lower().endswith(".pdf"):
+            new_bytes = render_stamp_on_pdf(original, stamp)
+            new_path = _write_file_bytes(doc["file_path"], new_bytes, "application/pdf")
+            return {"file_path": new_path, "file_size": len(new_bytes)}
+    except Exception as e:
+        logger.warning(f"Stamp apply failed: {e}")
+    return {}
+
 async def get_department_users(department: str, manager_only: bool = False) -> list:
     query = {"department": department}
     if manager_only:
@@ -510,6 +646,9 @@ async def upload_document(
         "created_by": user["id"],
         "created_by_name": user["full_name"],
         "current_department": hedef_birim or user.get("department", ""),
+        "involved_user_ids": [user["id"]],
+        "involved_departments": list({user.get("department", ""), hedef_birim or user.get("department", "")}),
+        "attachments": [],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
         "is_deleted": False,
@@ -539,12 +678,14 @@ async def get_documents(request: Request):
     if user["role"] == "admin":
         documents = await db.documents.find({"is_deleted": False}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     else:
-        # User sees documents they created OR documents currently in their department
+        # User sees documents where they are currently involved OR were ever involved
         documents = await db.documents.find({
             "is_deleted": False,
             "$or": [
                 {"created_by": user["id"]},
                 {"current_department": user.get("department", "")},
+                {"involved_user_ids": user["id"]},
+                {"involved_departments": user.get("department", "")},
             ],
         }, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
@@ -556,6 +697,10 @@ def _user_can_see_doc(user: dict, doc: dict) -> bool:
     if doc.get("created_by") == user["id"]:
         return True
     if doc.get("current_department") and doc["current_department"] == user.get("department"):
+        return True
+    if user["id"] in (doc.get("involved_user_ids") or []):
+        return True
+    if user.get("department") in (doc.get("involved_departments") or []):
         return True
     # Legacy compatibility
     if doc.get("current_holder") == user["id"]:
@@ -660,12 +805,18 @@ async def route_document(data: DocumentRouteRequest, request: Request):
 
     await db.documents.update_one(
         {"id": data.document_id},
-        {"$set": {
-            "current_department": to_department,
-            "current_holder": None,
-            "status": "pending",
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }},
+        {
+            "$set": {
+                "current_department": to_department,
+                "current_holder": None,
+                "status": "pending",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            "$addToSet": {
+                "involved_user_ids": user["id"],
+                "involved_departments": {"$each": [user.get("department", ""), to_department]},
+            },
+        },
     )
 
     # Notify users in target department
@@ -716,6 +867,9 @@ async def document_action(data: DocumentActionRequest, request: Request):
         }
         update_fields["status"] = "approved"
         update_fields["stamp"] = stamp
+        # Physically stamp the file (PDF/image overlay)
+        stamp_file_updates = await apply_stamp_to_file(doc, stamp)
+        update_fields.update(stamp_file_updates)
         # Belge geri gonderene (yani olusturana) doner
         creator = await db.users.find_one({"_id": ObjectId(doc["created_by"])})
         if creator:
@@ -766,7 +920,16 @@ async def document_action(data: DocumentActionRequest, request: Request):
         history_entry["stamp"] = update_fields["stamp"]
     await db.document_history.insert_one(history_entry)
 
-    await db.documents.update_one({"id": data.document_id}, {"$set": update_fields})
+    await db.documents.update_one(
+        {"id": data.document_id},
+        {
+            "$set": update_fields,
+            "$addToSet": {
+                "involved_user_ids": user["id"],
+                "involved_departments": user.get("department", ""),
+            },
+        },
+    )
 
     # Notify creator
     if doc["created_by"] != user["id"]:
@@ -789,10 +952,129 @@ async def get_document_history(document_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Document not found")
     
     if user["role"] != "admin" and doc["created_by"] != user["id"]:
-        raise HTTPException(status_code=403, detail="Only creator or admin can view history")
+        # Also allow users who are involved
+        if user["id"] not in (doc.get("involved_user_ids") or []) and user.get("department") not in (doc.get("involved_departments") or []):
+            raise HTTPException(status_code=403, detail="Only creator or admin can view history")
     
     history = await db.document_history.find({"document_id": document_id}, {"_id": 0}).sort("timestamp", 1).to_list(1000)
     return history
+
+# ===== DOCUMENT ATTACHMENTS =====
+
+@api_router.post("/documents/{document_id}/attachments")
+async def add_attachment(document_id: str, request: Request, file: UploadFile = File(...), note: str = Form("")):
+    """Add an extra file to the document's flow (folder-like behavior)."""
+    user = await get_current_user(request)
+    doc = await db.documents.find_one({"id": document_id, "is_deleted": False})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not _user_can_see_doc(user, doc):
+        raise HTTPException(status_code=403, detail="Bu belgeye ek yukleme yetkiniz yok")
+    # Do not allow after final statuses
+    if doc.get("status") in ("rejected", "cancelled"):
+        raise HTTPException(status_code=400, detail="Kapatilmis bir belgeye ek eklenemez")
+
+    data = await file.read()
+    ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+    storage_path = f"{APP_NAME}/documents/{user['id']}/{uuid.uuid4()}.{ext}"
+    try:
+        result = put_object(storage_path, data, file.content_type or "application/octet-stream")
+        stored_path = result["path"]
+        stored_size = result["size"]
+    except Exception as e:
+        logger.warning(f"Attachment storage fallback to local: {e}")
+        local_dir = ROOT_DIR / "uploads" / user["id"]
+        local_dir.mkdir(parents=True, exist_ok=True)
+        local_file = local_dir / f"{uuid.uuid4()}.{ext}"
+        local_file.write_bytes(data)
+        stored_path = f"local:{local_file}"
+        stored_size = len(data)
+
+    attachment = {
+        "id": str(uuid.uuid4()),
+        "file_path": stored_path,
+        "file_name": file.filename,
+        "file_size": stored_size,
+        "file_type": file.content_type or "application/octet-stream",
+        "note": note or "",
+        "uploaded_by": user["id"],
+        "uploaded_by_name": user["full_name"],
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.documents.update_one(
+        {"id": document_id},
+        {
+            "$push": {"attachments": attachment},
+            "$addToSet": {"involved_user_ids": user["id"], "involved_departments": user.get("department", "")},
+            "$set": {"updated_at": datetime.now(timezone.utc).isoformat()},
+        },
+    )
+    await db.document_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "document_id": document_id,
+        "user_id": user["id"],
+        "user_name": user["full_name"],
+        "department": user.get("department", ""),
+        "action": "attachment_added",
+        "note": f"Ek belge eklendi: {file.filename}" + (f" - {note}" if note else ""),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    })
+    # Notify creator if different
+    if doc.get("created_by") != user["id"]:
+        await create_notification(doc["created_by"], "Belgeye Ek Eklendi", f"{user['full_name']} '{doc['title']}' belgesine ek yukledi: {file.filename}", document_id)
+    await log_activity(user["id"], "add_attachment", "document", document_id, {"file_name": file.filename})
+    return attachment
+
+@api_router.get("/documents/{document_id}/attachments/{attachment_id}/download")
+async def download_attachment(document_id: str, attachment_id: str, request: Request):
+    user = await get_current_user(request)
+    doc = await db.documents.find_one({"id": document_id, "is_deleted": False})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not _user_can_see_doc(user, doc):
+        raise HTTPException(status_code=403, detail="Access denied")
+    att = next((a for a in (doc.get("attachments") or []) if a.get("id") == attachment_id), None)
+    if not att:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    data = _read_file_bytes(att["file_path"])
+    return FastAPIResponse(
+        content=data,
+        media_type=att.get("file_type", "application/octet-stream"),
+        headers={"Content-Disposition": f"attachment; filename={att['file_name']}"},
+    )
+
+@api_router.get("/documents/{document_id}/attachments/{attachment_id}/preview")
+async def preview_attachment(document_id: str, attachment_id: str, request: Request):
+    user = await get_current_user(request)
+    doc = await db.documents.find_one({"id": document_id, "is_deleted": False})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if not _user_can_see_doc(user, doc):
+        raise HTTPException(status_code=403, detail="Access denied")
+    att = next((a for a in (doc.get("attachments") or []) if a.get("id") == attachment_id), None)
+    if not att:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    data = _read_file_bytes(att["file_path"])
+    return FastAPIResponse(
+        content=data,
+        media_type=att.get("file_type", "application/octet-stream"),
+        headers={"Content-Disposition": f"inline; filename={att['file_name']}"},
+    )
+
+@api_router.delete("/documents/{document_id}/attachments/{attachment_id}")
+async def delete_attachment(document_id: str, attachment_id: str, request: Request):
+    user = await get_current_user(request)
+    doc = await db.documents.find_one({"id": document_id, "is_deleted": False})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    att = next((a for a in (doc.get("attachments") or []) if a.get("id") == attachment_id), None)
+    if not att:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    # Only uploader or admin can delete
+    if att.get("uploaded_by") != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Sadece yukleyen silebilir")
+    await db.documents.update_one({"id": document_id}, {"$pull": {"attachments": {"id": attachment_id}}})
+    return {"message": "Attachment deleted"}
 
 # ===== USER MANAGEMENT ENDPOINTS (ADMIN) =====
 

@@ -87,3 +87,43 @@ Onay No: `{PREFIX}-{10000+SEQ}` → `YON-10000` (her birim 10k'dan başlar)
 - Object Storage 400 dönüyor (EMERGENT_KEY env yok); belge yükleme otomatik olarak
   `backend/uploads/` altına düşüyor (local fallback). Kullanıcı tarafında fark yok.
 - Browser Notification yalnızca sayfa açıkken çalışır (PWA push şimdilik yok).
+
+---
+
+## 2026-04-22 Iteration — Bug fixes + Features
+
+### Fixed Bugs
+- **Belge kaybolma bug**: Finans/Muhasebe'den "revize iste", "yönlendir" vb. yaptıklarında
+  belge kendi panellerinden kayboluyordu. Artık `involved_user_ids` ve
+  `involved_departments` listelerine otomatik eklenip, belge akışa dahil olan
+  herkesin listesinde görünüyor.
+- **Local MongoDB index conflict**: Eski `vendors.name` index'i unique değilken yeni
+  kod unique yaratmaya çalışıyordu → `safe_create_index` helper eski index'i drop
+  edip yeniden kuruyor.
+- **CORS + cookie (lokal ağ)**: Login 401 hatası için CORS artık localhost,
+  192.168.x.x, 10.x.x.x ve emergentagent origin'lerini regex ile reflect ediyor.
+  Cookie samesite/secure bayrakları isteğin protokolüne göre adaptif (HTTPS=none+secure,
+  HTTP=lax+insecure). Login response `access_token` dönüyor → frontend
+  `Authorization: Bearer` header'ı fallback olarak ekliyor (cross-origin cookie
+  çalışmazsa da auth çalışır).
+- **Auth log detayı**: `AUTH FAIL (no token / token expired / user not found / invalid token)`
+  şeklinde açıklayıcı log çıktısı.
+
+### New Features
+- **Fiziksel Damga (PDF/Image overlay)**: Yönetici onay bastığında:
+  - PDF: reportlab ile her sayfaya sağ alt köşede yeşil çerçeveli "ONAYLANDI" kutusu
+    (isim, birim, onay no, tarih) basılıyor. `_stamped.pdf` olarak saklanıyor.
+  - Image: Pillow ile JPG/PNG üzerine aynı kutu basılıyor.
+  - Doğrulandı: Manager onayından sonra PDF ve image içinde fiziksel damga görünüyor.
+- **Ek Belgeler (Attachments - Klasör Mantığı)**: Belge akışındaki her yetkili
+  kullanıcı destekleyici dosyalar ekleyebiliyor. Endpoint'ler:
+  - `POST /api/documents/{id}/attachments` (multipart: file, note)
+  - `GET /api/documents/{id}/attachments/{aid}/download`
+  - `GET /api/documents/{id}/attachments/{aid}/preview`
+  - `DELETE /api/documents/{id}/attachments/{aid}` (sadece yukleyen / admin)
+  - UI: Belge Detay sayfasında "Ek Belgeler" bölümü, her ek için preview/download/delete
+    butonları. Ek ekleme belge_history'e de yazılıyor, gönderen kişiye bildirim gidiyor.
+
+### Backend New Dependencies
+- `pypdf==6.10.2` (PDF stamp overlay)
+- `reportlab==4.4.10` (stamp rendering)

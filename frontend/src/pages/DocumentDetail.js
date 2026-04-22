@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { DownloadSimple, PaperPlaneTilt, CheckCircle, XCircle, Clock, ArrowUDownLeft, ArrowCounterClockwise, Prohibit, QuestionMark, Eye } from '@phosphor-icons/react';
+import { DownloadSimple, PaperPlaneTilt, CheckCircle, XCircle, Clock, ArrowUDownLeft, ArrowCounterClockwise, Prohibit, QuestionMark, Eye, Paperclip, Plus, Trash } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 
@@ -38,6 +38,10 @@ const DocumentDetail = () => {
   const [showAction, setShowAction] = useState(false);
   const [actionData, setActionData] = useState({ action: '', note: '' });
   const [showPreview, setShowPreview] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState(null); // null = main doc, or attachment obj
+  const [showAddAttachment, setShowAddAttachment] = useState(false);
+  const [attData, setAttData] = useState({ file: null, note: '' });
+  const [attUploading, setAttUploading] = useState(false);
 
   useEffect(() => { fetchData(); /* eslint-disable-next-line */ }, [id]);
 
@@ -101,6 +105,51 @@ const DocumentDetail = () => {
     }
   };
 
+  const handleAddAttachment = async (e) => {
+    e.preventDefault();
+    if (!attData.file) { toast.error('Lütfen bir dosya seçin'); return; }
+    setAttUploading(true);
+    const form = new FormData();
+    form.append('file', attData.file);
+    form.append('note', attData.note);
+    try {
+      await axios.post(`${API}/documents/${id}/attachments`, form, { headers: { 'Content-Type': 'multipart/form-data' }, withCredentials: true });
+      toast.success('Ek belge eklendi');
+      setShowAddAttachment(false);
+      setAttData({ file: null, note: '' });
+      fetchData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Ek eklenemedi');
+    } finally { setAttUploading(false); }
+  };
+
+  const handleDeleteAttachment = async (attId) => {
+    if (!window.confirm('Bu eki silmek istediğinizden emin misiniz?')) return;
+    try {
+      await axios.delete(`${API}/documents/${id}/attachments/${attId}`, { withCredentials: true });
+      toast.success('Ek silindi');
+      fetchData();
+    } catch (error) { toast.error(error.response?.data?.detail || 'Silinemedi'); }
+  };
+
+  const handleAttachmentDownload = async (att) => {
+    try {
+      const response = await axios.get(`${API}/documents/${id}/attachments/${att.id}/download`, { withCredentials: true, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', att.file_name);
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) { toast.error('İndirilemedi'); }
+  };
+
+  const openPreview = (target) => {
+    setPreviewTarget(target);
+    setShowPreview(true);
+  };
+
   const getStatusBadge = (status) => {
     const s = STATUS_MAP[status] || STATUS_MAP.draft;
     return <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium border ${s.className}`}>{s.text}</span>;
@@ -121,10 +170,15 @@ const DocumentDetail = () => {
   const canGeriAl = isCreator && !['approved', 'rejected', 'cancelled'].includes(doc?.status);
   const canNotRelated = canActOnDoc && doc && doc.current_department !== user?.department ? false : canActOnDoc && ['pending', 'in_progress'].includes(doc?.status);
 
-  const previewUrl = `${API}/documents/${id}/preview`;
-  const isPdf = doc?.file_type?.includes('pdf');
-  const isImage = doc?.file_type?.startsWith('image/');
+  const previewUrl = previewTarget
+    ? `${API}/documents/${id}/attachments/${previewTarget.id}/preview`
+    : `${API}/documents/${id}/preview`;
+  const previewFileType = previewTarget?.file_type || doc?.file_type;
+  const previewFileName = previewTarget?.file_name || doc?.file_name;
+  const isPdf = (previewFileType || '').includes('pdf');
+  const isImage = (previewFileType || '').startsWith('image/');
   const isPreviewable = isPdf || isImage;
+  const mainIsPreviewable = (doc?.file_type || '').includes('pdf') || (doc?.file_type || '').startsWith('image/');
 
   if (loading) return <Layout><div className="flex items-center justify-center h-64 text-slate-600 text-sm">Yükleniyor...</div></Layout>;
   if (!doc) return null;
@@ -145,8 +199,8 @@ const DocumentDetail = () => {
               {doc.cari && <p className="text-sm text-slate-600 mt-1">Cari: <span className="font-medium">{doc.cari}</span></p>}
             </div>
             <div className="flex gap-2">
-              {isPreviewable && (
-                <button onClick={() => setShowPreview(true)} data-testid="preview-button" className="bg-white text-slate-900 border border-slate-200 px-5 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
+              {mainIsPreviewable && (
+                <button onClick={() => openPreview(null)} data-testid="preview-button" className="bg-white text-slate-900 border border-slate-200 px-5 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors flex items-center gap-2">
                   <Eye size={20} /><span>Önizle</span>
                 </button>
               )}
@@ -220,6 +274,54 @@ const DocumentDetail = () => {
           </div>
         </div>
 
+        {/* Attachments (klasör mantığı) */}
+        <div className="bg-white border border-slate-200 p-6" data-testid="attachments-section">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Paperclip size={20} className="text-slate-700" />
+              <h2 className="text-xl font-medium text-slate-900" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                Ek Belgeler <span className="text-sm text-slate-500 font-normal">({(doc.attachments || []).length})</span>
+              </h2>
+            </div>
+            {!['rejected', 'cancelled'].includes(doc.status) && (
+              <button onClick={() => setShowAddAttachment(true)} data-testid="add-attachment-button" className="bg-slate-900 text-white px-4 py-2 text-sm font-medium hover:bg-slate-800 transition-colors flex items-center gap-2">
+                <Plus size={18} /><span>Ek Yükle</span>
+              </button>
+            )}
+          </div>
+          {(doc.attachments || []).length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-6">Henüz ek belge yok. Akış ilerledikçe bu belgeye destekleyici dosyalar ekleyebilirsiniz.</p>
+          ) : (
+            <div className="space-y-2">
+              {doc.attachments.map((att) => {
+                const attPreviewable = (att.file_type || '').includes('pdf') || (att.file_type || '').startsWith('image/');
+                const canDelete = att.uploaded_by === user?.id || user?.role === 'admin';
+                return (
+                  <div key={att.id} className="flex items-center gap-3 p-3 border border-slate-200 hover:bg-slate-50 transition-colors" data-testid={`attachment-${att.id}`}>
+                    <Paperclip size={18} className="text-slate-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900 truncate">{att.file_name}</p>
+                      <p className="text-xs text-slate-500">
+                        {att.uploaded_by_name} · {new Date(att.uploaded_at).toLocaleString('tr-TR')}
+                        {att.note && <span className="ml-2 italic">— {att.note}</span>}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {attPreviewable && (
+                        <button onClick={() => openPreview(att)} data-testid={`preview-attachment-${att.id}`} className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title="Önizle"><Eye size={18} /></button>
+                      )}
+                      <button onClick={() => handleAttachmentDownload(att)} data-testid={`download-attachment-${att.id}`} className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors" title="İndir"><DownloadSimple size={18} /></button>
+                      {canDelete && (
+                        <button onClick={() => handleDeleteAttachment(att.id)} data-testid={`delete-attachment-${att.id}`} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors" title="Sil"><Trash size={18} /></button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* History */}
         <div className="bg-white border border-slate-200 p-6">
           <h2 className="text-xl font-medium text-slate-900 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>Belge Geçmişi</h2>
@@ -254,21 +356,44 @@ const DocumentDetail = () => {
 
         {/* Preview Modal */}
         {showPreview && (
-          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" data-testid="preview-modal" onClick={() => setShowPreview(false)}>
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" data-testid="preview-modal" onClick={() => { setShowPreview(false); setPreviewTarget(null); }}>
             <div className="bg-white w-full max-w-5xl h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <h3 className="text-lg font-medium text-slate-900">{doc.file_name}</h3>
-                <button onClick={() => setShowPreview(false)} data-testid="close-preview-button" className="text-slate-500 hover:text-slate-900"><XCircle size={24} /></button>
+                <h3 className="text-lg font-medium text-slate-900">{previewFileName}</h3>
+                <button onClick={() => { setShowPreview(false); setPreviewTarget(null); }} data-testid="close-preview-button" className="text-slate-500 hover:text-slate-900"><XCircle size={24} /></button>
               </div>
               <div className="flex-1 overflow-auto bg-slate-100">
                 {isPdf ? (
-                  <iframe src={previewUrl} title="PDF Preview" className="w-full h-full border-0" />
+                  <iframe src={previewUrl} title="Preview" className="w-full h-full border-0" />
                 ) : isImage ? (
-                  <div className="flex items-center justify-center h-full p-4"><img src={previewUrl} alt={doc.file_name} className="max-w-full max-h-full" /></div>
+                  <div className="flex items-center justify-center h-full p-4"><img src={previewUrl} alt={previewFileName} className="max-w-full max-h-full" /></div>
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-500">Bu dosya önizlenemez</div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Attachment Modal */}
+        {showAddAttachment && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" data-testid="add-attachment-modal">
+            <div className="bg-white border border-slate-200 p-8 w-full max-w-md">
+              <h3 className="text-xl font-semibold text-slate-900 mb-6" style={{ fontFamily: 'Outfit, sans-serif' }}>Ek Belge Yükle</h3>
+              <form onSubmit={handleAddAttachment} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Dosya *</label>
+                  <input type="file" onChange={(e) => setAttData({...attData, file: e.target.files[0]})} required data-testid="attachment-file-input" className="w-full border border-slate-200 px-4 py-2 text-sm bg-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama</label>
+                  <input type="text" value={attData.note} onChange={(e) => setAttData({...attData, note: e.target.value})} data-testid="attachment-note-input" className="w-full border border-slate-200 px-4 py-2 text-sm bg-white" placeholder="örn: Ek fatura, sözleşme kopyası..." />
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="submit" disabled={attUploading} data-testid="submit-attachment-button" className="flex-1 bg-slate-900 text-white px-6 py-2.5 text-sm font-medium hover:bg-slate-800 transition-colors disabled:opacity-50">{attUploading ? 'Yükleniyor...' : 'Yükle'}</button>
+                  <button type="button" onClick={() => { setShowAddAttachment(false); setAttData({ file: null, note: '' }); }} data-testid="cancel-attachment-button" className="flex-1 bg-white text-slate-900 border border-slate-200 px-6 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors">İptal</button>
+                </div>
+              </form>
             </div>
           </div>
         )}
