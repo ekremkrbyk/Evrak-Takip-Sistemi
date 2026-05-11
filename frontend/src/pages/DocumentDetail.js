@@ -29,6 +29,8 @@ const DocumentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [stampEnabled,  setStampEnabled]  = useState(true);
+  const [stampPosition, setStampPosition] = useState('front_bottom_right');
   const [doc, setDoc] = useState(null);
   const [history, setHistory] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -175,10 +177,22 @@ const DocumentDetail = () => {
     : `${API}/documents/${id}/preview`;
   const previewFileType = previewTarget?.file_type || doc?.file_type;
   const previewFileName = previewTarget?.file_name || doc?.file_name;
-  const isPdf = (previewFileType || '').includes('pdf');
-  const isImage = (previewFileType || '').startsWith('image/');
-  const isPreviewable = isPdf || isImage;
-  const mainIsPreviewable = (doc?.file_type || '').includes('pdf') || (doc?.file_type || '').startsWith('image/');
+  const isPdf    = (previewFileType || '').includes('pdf');
+  const isImage  = (previewFileType || '').startsWith('image/');
+  const isWord   = (previewFileType || '').includes('word') || !!(previewFileName || '').toLowerCase().match(/\.docx?$/);
+  const isExcel  = (previewFileType || '').includes('excel') || (previewFileType || '').includes('spreadsheet') || !!(previewFileName || '').toLowerCase().match(/\.xlsx?$/);
+  const isOffice = isWord || isExcel;
+  const isPreviewable = isPdf || isImage || isOffice;
+  // Word/Excel için preview-html URL: ek belgeyse attachment, ana belgeyse doc endpoint
+  const officeHtmlUrl = isOffice
+    ? previewTarget
+      ? `${API}/documents/${id}/attachments/${previewTarget.id}/preview-html`
+      : `${API}/documents/${id}/preview-html`
+    : null;
+  const mainIsWord  = !!(doc?.file_name || '').toLowerCase().match(/\.docx?$/) || (doc?.file_type || '').includes('word');
+  const mainIsExcel = !!(doc?.file_name || '').toLowerCase().match(/\.xlsx?$/) || (doc?.file_type || '').includes('spreadsheet') || (doc?.file_type || '').includes('excel');
+  const mainIsPreviewable = (doc?.file_type || '').includes('pdf') || (doc?.file_type || '').startsWith('image/')
+    || mainIsWord || mainIsExcel;
 
   if (loading) return <Layout><div className="flex items-center justify-center h-64 text-slate-600 text-sm">Yükleniyor...</div></Layout>;
   if (!doc) return null;
@@ -311,7 +325,11 @@ const DocumentDetail = () => {
           ) : (
             <div className="space-y-2">
               {doc.attachments.map((att) => {
-                const attPreviewable = (att.file_type || '').includes('pdf') || (att.file_type || '').startsWith('image/');
+                const attIsWord = !!(att.file_name||'').toLowerCase().match(/\.docx?$/) || (att.file_type||'').includes('word');
+                const attIsExcel = !!(att.file_name||'').toLowerCase().match(/\.xlsx?$/) || (att.file_type||'').includes('spreadsheet') || (att.file_type||'').includes('excel');
+                const attIsTxt = !!(att.file_name||'').toLowerCase().endsWith('.txt') || (att.file_type||'').includes('text/plain');
+                const attPreviewable = (att.file_type || '').includes('pdf') || (att.file_type || '').startsWith('image/')
+                  || attIsWord || attIsExcel || attIsTxt;
                 const canDelete = att.uploaded_by === user?.id || user?.role === 'admin';
                 return (
                   <div key={att.id} className="flex items-center gap-3 p-3 border border-slate-200 hover:bg-slate-50 transition-colors" data-testid={`attachment-${att.id}`}>
@@ -383,7 +401,22 @@ const DocumentDetail = () => {
                 {isPdf ? (
                   <iframe src={previewUrl} title="Preview" className="w-full h-full border-0" />
                 ) : isImage ? (
-                  <div className="flex items-center justify-center h-full p-4"><img src={previewUrl} alt={previewFileName} className="max-w-full max-h-full" /></div>
+                  <div className="flex items-center justify-center h-full p-4">
+                    <img src={previewUrl} alt={previewFileName} className="max-w-full max-h-full" />
+                  </div>
+                ) : isOffice ? (
+                  <div className="w-full h-full flex flex-col">
+                    <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 text-xs text-blue-800 flex items-center justify-between shrink-0">
+                      <span>{isWord ? '📝 Word' : '📊 Excel'} — Local Önizleme</span>
+                      <a href={previewUrl} download={previewFileName}
+                         className="underline font-medium hover:text-blue-900 ml-4"
+                         onClick={e => e.stopPropagation()}>
+                        İndir
+                      </a>
+                    </div>
+                    <iframe src={officeHtmlUrl} title="Office Preview"
+                      className="w-full flex-1 border-0 bg-white" />
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-full text-slate-500">Bu dosya önizlenemez</div>
                 )}

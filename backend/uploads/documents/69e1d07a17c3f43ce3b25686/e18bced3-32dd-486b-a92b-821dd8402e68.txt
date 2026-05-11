@@ -1,0 +1,27 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Junkware Removal Tool (JRT) by Malwarebytes
+Version: 8.1.4 (07.09.2017)
+Operating System: Windows 10 Enterprise x64 
+Ran by Bayram (Administrator) on Sal 10.06.2025 at 10:15:40,77
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+File System: 0 
+
+
+
+
+Registry: 2 
+
+Successfully deleted: HKLM\Software\Microsoft\Windows\CurrentVersion\Explorer\Browser Helper Objects\{1FD49718-1D00-4B19-AF5F-070AF6D5D54C} (Registry Key)
+Successfully deleted: HKLM\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Explorer\Browser Helper Objects\{1FD49718-1D00-4B19-AF5F-070AF6D5D54C} (Registry Key)
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Scan was completed on Sal 10.06.2025 at 10:19:02,60
+End of JRT log
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

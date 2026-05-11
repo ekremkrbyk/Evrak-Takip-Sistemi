@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import Pagination, { usePagination } from '../components/Pagination';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { FileText, Clock, CheckCircle, XCircle, ArrowCounterClockwise } from '@phosphor-icons/react';
@@ -18,6 +19,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0, iade_revize: 0 });
   const [recentDocuments, setRecentDocuments] = useState([]);
+  const { page, pageSize, setPageSize, totalPages, pageData: docPage, goTo, total, start } = usePagination(recentDocuments, 20);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { fetchData(); }, []);
@@ -29,7 +31,7 @@ const Dashboard = () => {
         axios.get(`${API}/documents`, { withCredentials: true }),
       ]);
       setStats(s.data);
-      setRecentDocuments(d.data.slice(0, 8));
+      setRecentDocuments(d.data);
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
     } finally { setLoading(false); }
@@ -108,7 +110,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentDocuments.map((doc) => (
+                  {docPage.map((doc) => (
                     <tr key={doc.id} onClick={() => navigate(`/documents/${doc.id}`)} className="border-b border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors" data-testid={`document-row-${doc.id}`}>
                       <td className="py-4 px-4 text-sm text-slate-700 font-mono">{doc.belge_no || '-'}</td>
                       <td className="py-4 px-4 text-sm text-slate-900 font-medium">{doc.title}</td>
@@ -123,6 +125,7 @@ const Dashboard = () => {
                   ))}
                 </tbody>
               </table>
+            <Pagination page={page} pageSize={pageSize} setPageSize={setPageSize} totalPages={totalPages} goTo={goTo} total={total} start={start} />
             </div>
           )}
         </div>

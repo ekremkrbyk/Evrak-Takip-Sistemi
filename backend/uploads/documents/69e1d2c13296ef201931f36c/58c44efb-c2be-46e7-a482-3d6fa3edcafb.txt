@@ -1,0 +1,7 @@
+Firewall 
+Swich/POE Swich arasındaki farklar
+Server odası mantığı 
+Ofis içi ağ mimarisi 
+Muhasebe yazıcı sorunu internet sorunu 
+Uzak POE swich bağlantısı kamera için ofis için bağlantı 
+modem yeterliliği hem ana bina hem ofisler hem depo kısmı için

@@ -1,0 +1,110 @@
+2026-05-07 08:18:05 [INFO] __main__ | CORS: local network mode
+2026-05-07 08:18:06 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 08:18:06 [INFO] server | CORS: local network mode
+2026-05-07 08:18:06 [INFO] server | Storage initialized
+2026-05-07 08:18:07 [INFO] server | Startup complete.
+2026-05-07 08:18:39 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-07 08:19:59 [INFO] server | put_object: 70379 bytes → C:\Users\ekrem\Desktop\sade emergent\Evrak-Takip-Sistemi\backend\uploads\attachments\905e8989-c1df-4dc4-b7ae-37afbe0f20f9\ac736173-8c26-4992-8e64-713365aaa9f3.png
+2026-05-07 08:19:59 [INFO] server | [FINANCE_MARK_PAID] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | document:905e8989-c1df-4dc4-b7ae-37afbe0f20f9 | {'note': 'Ödendi', 'route_muhasebe': True, 'dekont': 'Ekran görüntüsü 2026-04-30 100822.png'}
+2026-05-07 08:20:17 [INFO] server | [DOCUMENT_APPROVE] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | document:905e8989-c1df-4dc4-b7ae-37afbe0f20f9 | {'note': ''}
+2026-05-07 08:23:51 [INFO] server | [LOGIN] ENDER ALSAN (PATRON) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {}
+2026-05-07 08:25:55 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'ENDER ALSAN', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-07 08:26:39 [INFO] server | [UPDATE_USER] ENDER ALSAN (PATRON) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {'full_name': 'Ekrem Karabıyık', 'department': 'YONETIM', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-07 08:27:44 [INFO] server | [CREATE_VENDOR] ENDER ALSAN (PATRON) | IP:192.168.2.31 | vendor:c5dbd374-52ee-4ba1-a37d-97f74c9a9a2e | {'name': '123123'}
+2026-05-07 08:27:53 [INFO] server | [IMPORT_VENDORS] ENDER ALSAN (PATRON) | IP:192.168.2.31 | vendor:bulk | {'created': 0, 'skipped': 0}
+2026-05-07 08:28:02 [INFO] server | [IMPORT_VENDORS] ENDER ALSAN (PATRON) | IP:192.168.2.31 | vendor:bulk | {'created': 0, 'skipped': 0}
+2026-05-07 08:41:13 [INFO] __main__ | CORS: local network mode
+2026-05-07 08:41:14 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 08:41:15 [INFO] server | CORS: local network mode
+2026-05-07 08:41:15 [INFO] server | Storage initialized
+2026-05-07 08:41:15 [INFO] server | Startup complete.
+2026-05-07 08:41:58 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-07 08:42:15 [INFO] server | [IMPORT_VENDORS] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:bulk | {'created': 0, 'skipped': 0, 'errors_count': 0}
+2026-05-07 08:44:06 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'ENDER ALSAN', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-07 09:21:36 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 09:21:36 [INFO] server | CORS: local network mode
+2026-05-07 09:21:36 [INFO] server | Storage initialized
+2026-05-07 09:21:37 [INFO] server | Startup complete.
+2026-05-07 09:21:37 [INFO] server | Yedekleme scheduler başlatıldı (her gün saat 03:00)
+2026-05-07 09:21:37 [INFO] server | Sonraki otomatik yedek: 2026-05-08 03:00 (17.6 saat sonra)
+2026-05-07 09:26:00 [INFO] __main__ | CORS: local network mode
+2026-05-07 09:26:01 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 09:26:01 [INFO] server | CORS: local network mode
+2026-05-07 09:26:01 [INFO] server | Storage initialized
+2026-05-07 09:26:02 [INFO] server | Startup complete.
+2026-05-07 09:26:02 [INFO] server | Yedekleme scheduler başlatıldı (her gün saat 03:00)
+2026-05-07 09:26:02 [INFO] server | Sonraki otomatik yedek: 2026-05-08 03:00 (17.6 saat sonra)
+2026-05-07 09:27:31 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-07 09:27:56 [INFO] server | [IMPORT_VENDORS] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:bulk | {'created': 8, 'skipped': 0, 'errors_count': 0}
+2026-05-07 09:28:02 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:c5dbd374-52ee-4ba1-a37d-97f74c9a9a2e | {}
+2026-05-07 09:28:04 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:849db1ed-bcd3-4b15-a1ff-a3389ca86ede | {}
+2026-05-07 09:28:11 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:8a7a9483-6a74-4364-b7e7-268849311572 | {}
+2026-05-07 09:41:17 [INFO] server | [LOGIN] ENDER ALSAN (PATRON) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {}
+2026-05-07 09:41:45 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'ENDER ALSAN', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-07 10:14:29 [INFO] server | [IMPORT_VENDORS] ENDER ALSAN (PATRON) | IP:192.168.2.31 | vendor:bulk | {'created': 0, 'skipped': 8, 'errors_count': 0}
+2026-05-07 10:15:25 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'Patron Bey', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-07 10:15:35 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:715864dd-aa62-42ab-9acf-79aa3b6bb5c5 | {}
+2026-05-07 10:15:37 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:bd259c67-9dcf-4f5f-982c-5bae17017de5 | {}
+2026-05-07 10:15:39 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:913738ef-7325-4e41-9c32-a9a1144386ef | {}
+2026-05-07 10:15:41 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:06a32b33-b93e-4b56-b281-347785de122b | {}
+2026-05-07 10:15:43 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:6df971be-3428-45f8-904c-f5c1cdc92692 | {}
+2026-05-07 10:15:45 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:203c5d44-6a20-4da2-a1f3-df7d7d10cf82 | {}
+2026-05-07 10:15:47 [INFO] server | [DELETE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:a0c54243-063d-495f-893b-a3cc25c03dfa | {}
+2026-05-07 10:34:39 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 10:34:39 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 10:35:13 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 10:35:13 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 10:37:01 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-07 10:37:13 [WARNING] server | [LOGIN_FAILED] email=test2@yurudesign.com IP=192.168.2.31
+2026-05-07 10:37:18 [WARNING] server | [LOGIN_FAILED] email=test2@yurudesign.com.tr IP=192.168.2.31
+2026-05-07 10:37:20 [WARNING] server | [LOGIN_FAILED] email=test2@yurudesign.com IP=192.168.2.31
+2026-05-07 10:37:27 [INFO] server | [LOGIN] test2 (IHRACAT) | IP:192.168.2.31 | user:69e1d2c13296ef201931f36c | {}
+2026-05-07 10:46:10 [INFO] server | [LOGIN] test2 (IHRACAT) | IP:192.168.2.31 | user:69e1d2c13296ef201931f36c | {}
+2026-05-07 10:52:06 [WARNING] server | [LOGIN_FAILED] email=test2@yurudesign.com IP=192.168.2.31
+2026-05-07 10:52:10 [INFO] server | [LOGIN] test2 (IHRACAT) | IP:192.168.2.31 | user:69e1d2c13296ef201931f36c | {}
+2026-05-07 10:53:54 [INFO] server | put_object: 13745 bytes → C:\Users\ekrem\Desktop\sade emergent\Evrak-Takip-Sistemi\backend\uploads\evrak-takip\documents\69e1d2c13296ef201931f36c\03e3508c-d8e6-4fd8-9f4e-e8141633cecb.docx
+2026-05-07 10:53:54 [INFO] server | [UPLOAD_DOCUMENT] test2 (IHRACAT) | IP:192.168.2.31 | document:43b677b1-84ce-47d1-8ddc-f32baada00cb | {'belge_no': 'FIN-2026-00007', 'hedef_birim': 'FINANS'}
+2026-05-07 10:54:27 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 10:54:27 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 10:54:41 [INFO] server | [LOGIN] test4 (FINANS) | IP:192.168.2.31 | user:69e8bcb937f621f84e38339c | {}
+2026-05-07 10:59:21 [INFO] server | [CREATE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:8bb2f3ab-9911-432f-9c0a-2e735ca3f0ee | {'name': '123tekstil'}
+2026-05-07 10:59:39 [INFO] server | [IMPORT_VENDORS] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:bulk | {'created': 7, 'skipped': 1, 'errors_count': 0}
+2026-05-07 14:35:55 [INFO] server | AUTH: token expired (path=/api/notifications source=bearer) - client should re-login
+2026-05-07 14:35:56 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 14:35:56 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:34:36 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 15:34:37 [INFO] server | CORS: local network mode
+2026-05-07 15:34:37 [INFO] server | Storage initialized
+2026-05-07 15:34:37 [INFO] server | Startup complete.
+2026-05-07 15:34:37 [INFO] server | Yedekleme scheduler başlatıldı (her gün saat 03:00)
+2026-05-07 15:34:37 [INFO] server | Sonraki otomatik yedek: 2026-05-08 03:00 (11.4 saat sonra)
+2026-05-07 15:36:46 [INFO] __main__ | CORS: local network mode
+2026-05-07 15:36:48 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 15:36:48 [INFO] server | CORS: local network mode
+2026-05-07 15:36:48 [INFO] server | Storage initialized
+2026-05-07 15:36:48 [INFO] server | Startup complete.
+2026-05-07 15:36:48 [INFO] server | Yedekleme scheduler başlatıldı (her gün saat 03:00)
+2026-05-07 15:36:48 [INFO] server | Sonraki otomatik yedek: 2026-05-08 03:00 (11.4 saat sonra)
+2026-05-07 15:37:27 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:37:27 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:38:28 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-07 15:41:39 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'Patron Bey', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-07 15:46:49 [INFO] __main__ | CORS: local network mode
+2026-05-07 15:46:50 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 15:46:51 [INFO] server | CORS: local network mode
+2026-05-07 15:46:51 [INFO] server | Storage initialized
+2026-05-07 15:46:51 [INFO] server | Startup complete.
+2026-05-07 15:46:51 [INFO] server | Yedekleme scheduler başlatıldı (her gün saat 03:00)
+2026-05-07 15:46:51 [INFO] server | Sonraki otomatik yedek: 2026-05-08 03:00 (11.2 saat sonra)
+2026-05-07 15:47:17 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:47:17 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:50:17 [INFO] __main__ | CORS: local network mode
+2026-05-07 15:50:18 [INFO] __mp_main__ | CORS: local network mode
+2026-05-07 15:50:18 [INFO] server | CORS: local network mode
+2026-05-07 15:50:18 [INFO] server | Storage initialized
+2026-05-07 15:50:19 [INFO] server | Startup complete.
+2026-05-07 15:50:19 [INFO] server | Yedekleme scheduler başlatıldı (her gün saat 03:00)
+2026-05-07 15:50:19 [INFO] server | Sonraki otomatik yedek: 2026-05-08 03:00 (11.2 saat sonra)
+2026-05-07 15:50:27 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:50:27 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-07 15:50:45 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'Patron Bey', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}

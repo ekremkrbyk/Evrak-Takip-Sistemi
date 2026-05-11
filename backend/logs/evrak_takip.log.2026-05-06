@@ -1,0 +1,50 @@
+2026-05-06 08:27:50 [INFO] __main__ | CORS: local network mode
+2026-05-06 08:27:51 [INFO] __mp_main__ | CORS: local network mode
+2026-05-06 08:27:52 [INFO] server | CORS: local network mode
+2026-05-06 08:27:52 [INFO] server | Storage initialized
+2026-05-06 08:27:52 [INFO] server | Startup complete.
+2026-05-06 08:28:21 [INFO] __main__ | CORS: local network mode
+2026-05-06 08:28:23 [INFO] __mp_main__ | CORS: local network mode
+2026-05-06 08:28:23 [INFO] server | CORS: local network mode
+2026-05-06 08:28:23 [INFO] server | Storage initialized
+2026-05-06 08:28:24 [INFO] server | Startup complete.
+2026-05-06 08:33:05 [INFO] server | put_object: 17305 bytes → C:\Users\ekrem\Desktop\sade emergent\Evrak-Takip-Sistemi\backend\uploads\evrak-takip\documents\69e8bbaf37f621f84e383390\60e20c8b-084a-451f-bab2-1e4cccaab0b0.xlsx
+2026-05-06 08:33:05 [INFO] server | [UPLOAD_DOCUMENT] test3 (IHRACAT) | IP:192.168.2.31 | document:905e8989-c1df-4dc4-b7ae-37afbe0f20f9 | {'belge_no': 'FIN-2026-00006', 'hedef_birim': 'FINANS'}
+2026-05-06 08:33:54 [INFO] server | [LOGIN] test4 (FINANS) | IP:192.168.2.31 | user:69e8bcb937f621f84e38339c | {}
+2026-05-06 08:39:58 [INFO] server | [LOGIN] test3 (IHRACAT) | IP:192.168.2.31 | user:69e8bbaf37f621f84e383390 | {}
+2026-05-06 11:06:17 [INFO] __main__ | CORS: local network mode
+2026-05-06 11:06:18 [INFO] __mp_main__ | CORS: local network mode
+2026-05-06 11:06:18 [INFO] server | CORS: local network mode
+2026-05-06 11:06:18 [INFO] server | Storage initialized
+2026-05-06 11:06:19 [INFO] server | Startup complete.
+2026-05-06 11:07:53 [INFO] __main__ | CORS: local network mode
+2026-05-06 11:07:55 [INFO] __mp_main__ | CORS: local network mode
+2026-05-06 11:07:55 [INFO] server | CORS: local network mode
+2026-05-06 11:07:55 [INFO] server | Storage initialized
+2026-05-06 11:07:56 [INFO] server | Startup complete.
+2026-05-06 14:33:32 [INFO] __main__ | CORS: local network mode
+2026-05-06 14:33:33 [INFO] __mp_main__ | CORS: local network mode
+2026-05-06 14:33:33 [INFO] server | CORS: local network mode
+2026-05-06 14:33:33 [INFO] server | Storage initialized
+2026-05-06 14:33:35 [INFO] server | Startup complete.
+2026-05-06 14:33:57 [INFO] server | AUTH: token expired (path=/api/notifications source=bearer) - client should re-login
+2026-05-06 14:34:05 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-06 14:34:05 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-06 14:34:10 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-06 14:34:44 [INFO] server | [LOGIN] test4 (FINANS) | IP:192.168.2.31 | user:69e8bcb937f621f84e38339c | {}
+2026-05-06 14:35:02 [INFO] server | [LOGIN] test3 (IHRACAT) | IP:192.168.2.31 | user:69e8bbaf37f621f84e383390 | {}
+2026-05-06 14:35:41 [INFO] server | put_object: 174527 bytes → C:\Users\ekrem\Desktop\sade emergent\Evrak-Takip-Sistemi\backend\uploads\attachments\8e52d430-d20a-47c2-87da-47ce1fc1fc3a\30542d84-c7dd-4357-97d9-c028a55d0f70.jpeg
+2026-05-06 14:35:41 [INFO] server | [FINANCE_MARK_PAID] test4 (FINANS) | IP:192.168.2.31 | document:8e52d430-d20a-47c2-87da-47ce1fc1fc3a | {'note': 'Ödendi', 'route_muhasebe': True, 'dekont': 'WhatsApp Image 2026-04-30 at 09.18.46.jpeg'}
+2026-05-06 14:35:59 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-06 14:35:59 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-06 14:36:32 [INFO] server | [LOGIN] testtest (MUHASEBE) | IP:192.168.2.31 | user:69e1d07a17c3f43ce3b25686 | {}
+2026-05-06 14:37:28 [INFO] server | [DOCUMENT_APPROVE] testtest (MUHASEBE) | IP:192.168.2.31 | document:8e52d430-d20a-47c2-87da-47ce1fc1fc3a | {'note': ''}
+2026-05-06 14:48:29 [INFO] server | [CREATE_VENDOR] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:849db1ed-bcd3-4b15-a1ff-a3389ca86ede | {'name': '123ltd'}
+2026-05-06 14:48:55 [INFO] server | [IMPORT_VENDORS] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | vendor:bulk | {'created': 0, 'skipped': 0}
+2026-05-06 14:52:17 [INFO] server | [LOGIN] ENDER ALSAN (PATRON) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {}
+2026-05-06 14:52:38 [INFO] server | [UPDATE_USER] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'full_name': 'ENDER ALSAN', 'department': 'PATRON', 'role': 'admin', 'permissions': ['all', 'view_documents', 'create_documents', 'edit_documents', 'delete_documents', 'approve_documents', 'route_documents'], 'permission_group_id': '55065e63-6856-4451-94d2-d9c5347a9e11', 'is_manager': True}
+2026-05-06 15:12:59 [INFO] __main__ | CORS: local network mode
+2026-05-06 15:13:01 [INFO] __mp_main__ | CORS: local network mode
+2026-05-06 15:13:01 [INFO] server | CORS: local network mode
+2026-05-06 15:13:01 [INFO] server | Storage initialized
+2026-05-06 15:13:02 [INFO] server | Startup complete.

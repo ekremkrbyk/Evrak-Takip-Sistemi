@@ -1,0 +1,29 @@
+2026-05-11 12:53:10 [INFO] __main__ | CORS: local network mode
+2026-05-11 12:53:20 [INFO] __mp_main__ | CORS: local network mode
+2026-05-11 12:53:22 [INFO] server | CORS: local network mode
+2026-05-11 12:53:22 [INFO] server | Storage initialized
+2026-05-11 12:53:25 [INFO] server | Startup complete.
+2026-05-11 12:57:18 [INFO] server | AUTH: token expired (path=/api/auth/me source=bearer) - client should re-login
+2026-05-11 12:57:18 [INFO] server | AUTH: token expired (path=/api/auth/me source=bearer) - client should re-login
+2026-05-11 12:57:19 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-11 12:57:19 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-11 12:57:25 [INFO] server | [LOGIN] Ekrem Karabıyık (YONETIM) | IP:192.168.2.31 | user:69e1cc43b058bc991402c88c | {}
+2026-05-11 12:57:37 [INFO] server | AUTH: token expired (path=/api/auth/me source=bearer) - client should re-login
+2026-05-11 12:57:37 [INFO] server | AUTH: token expired (path=/api/auth/me source=bearer) - client should re-login
+2026-05-11 12:57:46 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-11 12:57:46 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://localhost:3000 cookie_header=no. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-11 13:00:29 [INFO] server | [LOGIN] test3 (IHRACAT) | IP:192.168.2.31 | user:69e8bbaf37f621f84e383390 | {}
+2026-05-11 13:00:54 [INFO] server | [RAPOR_EXCEL] test3 (IHRACAT) | IP:192.168.2.31 | report:IHRACAT | {'period': 'ay', 'count': 4}
+2026-05-11 13:03:08 [INFO] server | AUTH: token expired (path=/api/auth/me source=bearer) - client should re-login
+2026-05-11 13:03:08 [INFO] server | AUTH: token expired (path=/api/auth/me source=bearer) - client should re-login
+2026-05-11 13:03:09 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-11 13:03:09 [WARNING] server | AUTH FAIL (no token): path=/api/auth/me origin=http://192.168.2.31:3000 cookie_header=yes. Frontend REACT_APP_BACKEND_URL must match this server & cookies must be sent (withCredentials: true + CORS origin match).
+2026-05-11 13:03:49 [INFO] server | [LOGIN] Patron Bey (PATRON) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {}
+2026-05-11 13:03:53 [INFO] server | [UPDATE_USER] Patron Bey (PATRON) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'view_all_documents': False}
+2026-05-11 13:03:55 [INFO] server | [UPDATE_USER] Patron Bey (PATRON) | IP:192.168.2.31 | user:69f051ee897223f0d3d8f1a5 | {'view_all_documents': True}
+2026-05-11 13:04:35 [INFO] server | [MANUAL_BACKUP] Patron Bey (PATRON) | IP:192.168.2.31 | system:backup | {'file': 'evrak_backup_20260511_130428.zip', 'size_mb': 22.8}
+2026-05-11 16:00:52 [INFO] __main__ | CORS: local network mode
+2026-05-11 16:00:54 [INFO] __mp_main__ | CORS: local network mode
+2026-05-11 16:00:55 [INFO] server | CORS: local network mode
+2026-05-11 16:00:55 [INFO] server | Storage initialized
+2026-05-11 16:00:55 [INFO] server | Startup complete.

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import Pagination, { usePagination } from '../components/Pagination';
 import axios from 'axios';
 import { UploadSimple, MagnifyingGlass, CurrencyDollar } from '@phosphor-icons/react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -120,6 +121,8 @@ const Documents = () => {
     return matchQ && matchS;
   });
 
+  const { page, pageSize, setPageSize, totalPages, pageData, goTo, total, start } = usePagination(filteredDocs, 20);
+
   const getStatusBadge = (status) => {
     const s = STATUS_MAP[status] || STATUS_MAP.draft;
     return <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-medium border ${s.className}`}>{s.text}</span>;
@@ -227,7 +230,7 @@ const Documents = () => {
 
         {/* Documents Table */}
         <div className="bg-white border border-slate-200 p-6">
-          <p className="text-sm text-slate-500 mb-4">{filteredDocs.length} belge listeleniyor</p>
+          <p className="text-sm text-slate-500 mb-4">{filteredDocs.length} belgeden {Math.min((page-1)*pageSize+1, filteredDocs.length)}–{Math.min(page*pageSize, filteredDocs.length)} gösteriliyor</p>
           {filteredDocs.length === 0 ? (
             <div className="text-center py-12 text-sm text-slate-500">Belge bulunamadı</div>
           ) : (
@@ -246,7 +249,7 @@ const Documents = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDocs.map((doc) => {
+                  {pageData.map((doc) => {
                     const urgent = isUrgent(doc.hedef_tarih);
                     return (
                       <tr

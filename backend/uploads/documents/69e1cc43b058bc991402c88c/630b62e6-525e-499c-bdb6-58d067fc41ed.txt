@@ -1,0 +1,1 @@
+kameraların swcih ve port bilgileri gönderilecek iki adet boş ip ye ihtiyaç var iki tane inactive kamera için 
